@@ -7,7 +7,6 @@ const TOOLS = [
   { type: 'notice',     emoji: '📢', name: '사장님공지 생성', tab: '공지',     desc: '이벤트·휴무·신메뉴' },
   { type: 'menuname',   emoji: '🍽️', name: '메뉴명 SEO',      tab: '메뉴명',   desc: '검색 키워드 최적화 3종' },
   { type: 'menudesc',   emoji: '📝', name: '메뉴설명 후킹',   tab: '메뉴설명', desc: '60자 이내 · 후킹+구성' },
-  { type: 'reply',      emoji: '💬', name: '리뷰답변 생성',   tab: '리뷰답변', desc: '별점 기반 톤 자동 조정' },
   { type: 'orderguide', emoji: '📌', name: '주문안내 생성',   tab: '주문안내', desc: '첫 줄 후크 + 본문' },
   { type: 'menuoption', emoji: '🧩', name: '메뉴 옵션 설계',  tab: '옵션설계', desc: '객단가 +20~40% 레버' },
 ];
@@ -44,7 +43,7 @@ export default function App() {
       {/* 상단 고정 네비게이터 */}
       <div style={s.nav}>
         <button style={s.brand} onClick={() => setActive(null)} className='brandBtn'>
-          단꿈 <span style={{ color: '#f0b942' }}>AI 문구</span> 도구
+          단꿈 <span style={{ color: "#f0b942" }}>AI 문구</span> 메이커
         </button>
         <div style={s.tabBarWrap}>
           <div style={s.tabBar} className='tabBar'>
@@ -88,8 +87,9 @@ function Home({ tools, onPick }) {
   return (
     <div style={s.body}>
       <div style={s.hero}>
-        <div style={s.heroTitle}>어떤 문구가 필요하세요?</div>
-        <div style={s.heroSub}>배민 사장님을 위한 문구 자동 생성 · 로그인 없이 바로 사용</div>
+        <div style={s.heroLabel}>단꿈 장사도구</div>
+        <div style={s.heroTitle}>AI 문구 메이커</div>
+        <div style={s.heroSub}>가게소개 · 공지 · 메뉴명 · 메뉴설명 · 주문안내 · 옵션설계 — 6가지 문구를 한 곳에서</div>
       </div>
       <div style={s.grid}>
         {tools.map(t => (
@@ -147,9 +147,10 @@ const s = {
   },
 
   body: { padding:'26px 16px 32px' },
-  hero: { maxWidth:'640px', margin:'0 auto 22px', textAlign:'center' },
-  heroTitle: { fontFamily:SERIF, fontSize:'22px', fontWeight:800, color:'#f2f0ea' },
-  heroSub: { fontSize:'12.5px', color:'#9a8f78', marginTop:'9px' },
+  hero: { maxWidth:'640px', margin:'0 auto 26px', textAlign:'center' },
+  heroLabel: { fontSize:'12px', fontWeight:700, letterSpacing:'.06em', color:'#f0b942', marginBottom:'10px' },
+  heroTitle: { fontFamily:SERIF, fontSize:'32px', fontWeight:800, color:'#f2f0ea', lineHeight:1.25 },
+  heroSub: { fontSize:'13px', color:'#9a8f78', marginTop:'12px' },
 
   grid: { maxWidth:'640px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
