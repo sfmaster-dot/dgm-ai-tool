@@ -1,0 +1,34 @@
+<!--
+  아임웹(단꿈넷) 페이지에 "HTML 삽입" 블록을 추가하고 아래 코드를 붙여넣으세요.
+  ▸ iframe src 의 도메인을 배포된 Vercel 주소로 교체하세요.
+  ▸ 특정 도구로 바로 진입하려면 src 끝에 ?type=reply 처럼 붙이세요.
+     (type: intro / notice / menuname / menudesc / reply / orderguide / menuoption)
+  ▸ 높이는 도구 앱이 postMessage로 자기 높이를 보내면 아래 스크립트가 iframe에 반영합니다.
+-->
+<div style="max-width:640px;margin:0 auto;">
+  <iframe
+    id="dgm-ai-tool"
+    src="https://dgm-ai-tool.vercel.app/"
+    style="width:100%;border:0;display:block;min-height:520px;"
+    scrolling="no"
+    title="단꿈 AI 문구 도구"
+    loading="lazy"
+  ></iframe>
+</div>
+
+<script>
+(function () {
+  var frame = document.getElementById('dgm-ai-tool');
+  if (!frame) return;
+  // 도구 앱 오리진만 신뢰 (배포 주소로 교체)
+  var TOOL_ORIGIN = 'https://dgm-ai-tool.vercel.app';
+  window.addEventListener('message', function (e) {
+    if (e.origin !== TOOL_ORIGIN) return;
+    var d = e.data || {};
+    if (d.type === 'dgm-ai-tool:height' && typeof d.height === 'number') {
+      // 최소 높이 보장 + 약간의 여유
+      frame.style.height = Math.max(d.height, 300) + 'px';
+    }
+  });
+})();
+</script>
