@@ -14,7 +14,7 @@ const LABELS = {
 };
 
 // 순수 무로그인 폼. 로그인·매장·aiCache·히스토리 없음. 생성은 100% 폼 입력 기반.
-export default function AiForm({ type, tool }) {
+export default function AiForm({ type, tool, bare }) {
   const [form, setForm]       = useState({ ...DEFAULT_FORM });
   const [preset, setPreset]   = useState('');
   const [flash, setFlash]     = useState(0);
@@ -80,10 +80,12 @@ export default function AiForm({ type, tool }) {
 
   return (
     <div style={s.page}>
-      <div style={s.head}>
-        <div style={s.title}>{tool?.emoji} {LABELS[type]}</div>
-        <div style={s.sub}>가게 정보를 입력하면 AI가 문구를 생성해드립니다</div>
-      </div>
+      {!bare && (
+        <div style={s.head}>
+          <div style={s.title}>{tool?.emoji} {LABELS[type]}</div>
+          <div style={s.sub}>가게 정보를 입력하면 AI가 문구를 생성해드립니다</div>
+        </div>
+      )}
 
       <div style={{ ...S.mbody, padding: 0 }}>
         {isMenuoption && (

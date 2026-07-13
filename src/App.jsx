@@ -1,17 +1,23 @@
 import { useState, useEffect, useLayoutEffect } from 'react';
 import AiForm from './components/AiForm';
 
-// 노출 도구 7종. name=긴 이름(그리드/헤더), tab=짧은 이름(탭바)
+// ── AI 문구 메이커: 문구 5종 (옵션설계 제외) ──
 const TOOLS = [
   { type: 'intro',      emoji: '🏪', name: '가게소개 생성',   tab: '가게소개', desc: '200~400자 · 스토리형' },
   { type: 'notice',     emoji: '📢', name: '사장님공지 생성', tab: '공지',     desc: '이벤트·휴무·신메뉴' },
   { type: 'menuname',   emoji: '🍽️', name: '메뉴명 SEO',      tab: '메뉴명',   desc: '검색 키워드 최적화 3종' },
   { type: 'menudesc',   emoji: '📝', name: '메뉴설명 후킹',   tab: '메뉴설명', desc: '60자 이내 · 후킹+구성' },
   { type: 'orderguide', emoji: '📌', name: '주문안내 생성',   tab: '주문안내', desc: '첫 줄 후크 + 본문' },
-  { type: 'menuoption', emoji: '🧩', name: '메뉴 옵션 설계',  tab: '옵션설계', desc: '객단가 +20~40% 레버' },
 ];
-
 const VALID = new Set(TOOLS.map(t => t.type));
+
+// ── 메뉴 옵션 메이커: 독립 도구 (/option 경로) ──
+const OPTION_TOOL = { type: 'menuoption', emoji: '🧩', name: '메뉴 옵션 설계' };
+
+// 경로로 모드 판별. /option → 메뉴 옵션 메이커, 그 외 → AI 문구 메이커
+function isOptionMode() {
+  return window.location.pathname.replace(/\/+$/, '').endsWith('/option');
+}
 
 // iframe 임베드 시: 현재 문서 높이를 부모(아임웹)로 전송 → 부모가 iframe height 조정.
 function useReportHeight(dep) {
@@ -29,6 +35,11 @@ function useReportHeight(dep) {
 }
 
 export default function App() {
+  return isOptionMode() ? <OptionMaker /> : <CopyMaker />;
+}
+
+// ══ AI 문구 메이커 ══
+function CopyMaker() {
   const initial = (() => {
     const t = new URLSearchParams(window.location.search).get('type');
     return t && VALID.has(t) ? t : null;
@@ -40,7 +51,6 @@ export default function App() {
 
   return (
     <div style={s.wrap}>
-      {/* 헤더: 히어로 → 구분선 → 탭 네비게이션 */}
       <div style={s.header}>
         <div style={s.hero}>
           <div style={s.heroLabel}>단꿈 장사도구</div>
@@ -48,7 +58,7 @@ export default function App() {
             <span style={s.heroIcon}>✨</span>
             <span style={s.heroTitle}>AI 문구 메이커</span>
           </div>
-          <div style={s.heroSub}>배달앱의 가게소개, 메뉴명 SEO, 객단가를 올려주는 메뉴 옵션 설계까지 도와줍니다.</div>
+          <div style={s.heroSub}>배달앱의 가게소개, 공지, 메뉴명 SEO, 메뉴설명까지 문구를 자동으로 만들어드립니다.</div>
         </div>
 
         <div style={s.divider} />
@@ -57,12 +67,8 @@ export default function App() {
           {TOOLS.map(t => {
             const on = active === t.type;
             return (
-              <button
-                key={t.type}
-                onClick={() => setActive(t.type)}
-                style={{ ...s.tab, ...(on ? s.tabOn : {}) }}
-                className='navTab'
-              >
+              <button key={t.type} onClick={() => setActive(t.type)}
+                style={{ ...s.tab, ...(on ? s.tabOn : {}) }} className='navTab'>
                 <span style={{ fontSize: '13px' }}>{t.emoji}</span>
                 <span>{t.tab}</span>
               </button>
@@ -71,19 +77,12 @@ export default function App() {
         </div>
       </div>
 
-      {/* 본문 */}
       {active
         ? <AiForm type={active} tool={TOOLS.find(t => t.type === active)} />
         : <Home tools={TOOLS} onPick={setActive} />
       }
 
-      <style>{`
-        .navTab:hover { border-color: rgba(232,168,56,.5) !important; color: #f2f0ea !important; }
-        .toolCard:hover { border-color: rgba(232,168,56,.45) !important; background: #1c1811 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
-        .toolCard:hover .cardLine { background: linear-gradient(180deg,#eeb040,#e0972a) !important; }
-        .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
-        .tabBar::-webkit-scrollbar { height: 0; }
-      `}</style>
+      <SharedStyle />
     </div>
   );
 }
@@ -111,6 +110,42 @@ function Home({ tools, onPick }) {
   );
 }
 
+// ══ 메뉴 옵션 메이커 (독립) ══
+function OptionMaker() {
+  useReportHeight('option');
+  return (
+    <div style={s.wrap}>
+      <div style={s.header}>
+        <div style={s.hero}>
+          <div style={s.heroLabel}>단꿈 장사도구</div>
+          <div style={s.heroRow}>
+            <span style={s.heroIcon}>🧩</span>
+            <span style={s.heroTitle}>메뉴 옵션 메이커</span>
+          </div>
+          <div style={s.heroSub}>메뉴 구성·토핑·사이드·세트를 전략적으로 설계해 객단가를 끌어올립니다.</div>
+        </div>
+        <div style={s.divider} />
+      </div>
+
+      <AiForm type="menuoption" tool={OPTION_TOOL} bare />
+
+      <SharedStyle />
+    </div>
+  );
+}
+
+function SharedStyle() {
+  return (
+    <style>{`
+      .navTab:hover { border-color: rgba(232,168,56,.5) !important; color: #f2f0ea !important; }
+      .toolCard:hover { border-color: rgba(232,168,56,.45) !important; background: #1c1811 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+      .toolCard:hover .cardLine { background: linear-gradient(180deg,#eeb040,#e0972a) !important; }
+      .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
+      .tabBar::-webkit-scrollbar { height: 0; }
+    `}</style>
+  );
+}
+
 const SERIF = "'Nanum Myeongjo', serif";
 
 const s = {
@@ -118,7 +153,6 @@ const s = {
 
   header: { padding:'32px 16px 0' },
   divider: { maxWidth:'640px', margin:'22px auto 18px', height:'1px', background:'#2a251f' },
-  tabBarWrap: { maxWidth:'640px', margin:'0 auto', overflow:'hidden' },
   tabBar: {
     display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'2px',
     maxWidth:'640px', margin:'0 auto',
