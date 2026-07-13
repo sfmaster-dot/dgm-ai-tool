@@ -1010,6 +1010,21 @@ STEP 3. 자기검증 (출력 직전)
     menuoption: storeInfo.mode === 'board' ? 5000 : 3000,  // v8: single 1500 → 3000 (객단가 + 신규 제안 영역 추가)
   };
 
+  // 하이브리드 모델 라우팅 — 비용 최적화
+  // 가벼운 문구 생성 6종은 Haiku 4.5(1/3 가격), 전략적 사고가 필요한 옵션설계만 Sonnet 4.5
+  const HAIKU  = 'claude-haiku-4-5';
+  const SONNET = 'claude-sonnet-4-5';
+  const modelByType = {
+    intro:      HAIKU,
+    notice:     HAIKU,
+    menuname:   HAIKU,
+    menudesc:   HAIKU,
+    reply:      HAIKU,
+    orderguide: HAIKU,
+    menuoption: SONNET,  // 옵션 설계는 품질 우선 → Sonnet 유지
+  };
+  const model = modelByType[type] || SONNET;
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1019,7 +1034,7 @@ STEP 3. 자기검증 (출력 직전)
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model,
         max_tokens: maxTokensByType[type] || 1500,
         messages: [{ role: 'user', content: prompts[type] }]
       })
