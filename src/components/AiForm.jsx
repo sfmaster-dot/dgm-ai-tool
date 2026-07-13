@@ -74,7 +74,7 @@ export default function AiForm({ type, onBack }) {
   }
 
   const showPreset = ['intro','notice','menuname','menudesc'].includes(type);
-  const flashStyle = { background: flash ? 'rgba(61,186,111,.18)' : '#0d0f10', transition: 'background .4s' };
+  const flashStyle = { background: flash ? 'rgba(232,168,56,.18)' : '#0d0f10', transition: 'background .4s' };
   const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
   const isMenuoption = type === 'menuoption';
 
@@ -250,11 +250,11 @@ export default function AiForm({ type, onBack }) {
       </div>
 
       <style>{`
-        .rerollBtn:hover { background: rgba(61,186,111,.12) !important; }
+        .rerollBtn:hover { background: rgba(232,168,56,.12) !important; }
         .rerollBtn:hover .diceIcon { transform: rotate(180deg); }
         .rerollBtn:active { transform: scale(0.95); }
-        .guideToggle:hover { background: rgba(61,186,111,.12) !important; }
-        .backBtn:hover { color: #3dba6f !important; }
+        .guideToggle:hover { background: rgba(232,168,56,.12) !important; }
+        .backBtn:hover { color: #e8a838 !important; }
       `}</style>
     </div>
   );

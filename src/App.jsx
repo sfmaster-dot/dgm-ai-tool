@@ -51,18 +51,19 @@ export default function App() {
   return (
     <div style={s.wrap}>
       <div style={s.header}>
-        <div style={s.brand}>단꿈 AI 문구 도구</div>
+        <div style={s.brand}>단꿈 <span style={{color:'#f0b942'}}>AI 문구</span> 도구</div>
         <div style={s.tagline}>배민 사장님을 위한 문구 자동 생성 · 로그인 없이 바로 사용</div>
       </div>
       <div style={s.grid}>
         {TOOLS.map(t => (
           <button key={t.type} style={s.card} onClick={() => setActive(t.type)} className='toolCard'>
+            <span style={s.cardLine} />
             <span style={s.cardEmoji}>{t.emoji}</span>
             <span style={s.cardBody}>
               <span style={s.cardName}>{t.name}</span>
               <span style={s.cardDesc}>{t.desc}</span>
             </span>
-            <span style={s.cardArrow}>→</span>
+            <span style={s.cardArrow} className='cardArrow'>→</span>
           </button>
         ))}
       </div>
@@ -70,29 +71,37 @@ export default function App() {
         생성 결과는 참고용 초안입니다. 사장님만의 정체성을 더해 완성하세요.
       </div>
       <style>{`
-        .toolCard:hover { border-color: rgba(61,186,111,.5) !important; background: rgba(61,186,111,.06) !important; transform: translateY(-1px); }
-        .toolCard:hover .cardArrow { transform: translateX(3px); color:#3dba6f !important; }
+        .toolCard:hover { border-color: rgba(232,168,56,.55) !important; background: #201a15 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+        .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
       `}</style>
     </div>
   );
 }
 
 const s = {
-  wrap: { minHeight:'100%', padding:'20px 16px 28px', boxSizing:'border-box', color:'#e8ede8' },
-  header: { maxWidth:'580px', margin:'0 auto 20px', textAlign:'center' },
-  brand: { fontSize:'20px', fontWeight:800, color:'#e8ede8', letterSpacing:'-.01em' },
-  tagline: { fontSize:'12.5px', color:'#607570', marginTop:'6px' },
-  grid: { maxWidth:'580px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px' },
+  wrap: { minHeight:'100%', padding:'22px 16px 30px', boxSizing:'border-box', color:'#e8ede8' },
+  header: { maxWidth:'580px', margin:'0 auto 22px', textAlign:'center' },
+  brand: { fontSize:'21px', fontWeight:800, color:'#f2f0ea', letterSpacing:'-.01em' },
+  tagline: { fontSize:'12.5px', color:'#9a8f78', marginTop:'7px' },
+  grid: { maxWidth:'580px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
-    display:'flex', alignItems:'center', gap:'14px', width:'100%', textAlign:'left',
-    background:'#16191a', border:'1px solid #2a2f30', borderRadius:'12px',
-    padding:'16px 18px', cursor:'pointer', fontFamily:'inherit',
+    position:'relative', display:'flex', alignItems:'center', gap:'14px', width:'100%', textAlign:'left',
+    background:'#191614', border:'1px solid #34302a', borderRadius:'13px',
+    padding:'17px 18px', cursor:'pointer', fontFamily:'inherit', overflow:'hidden',
     transition:'all .18s',
   },
-  cardEmoji: { fontSize:'26px', flexShrink:0, width:'34px', textAlign:'center' },
+  cardLine: {
+    position:'absolute', top:0, left:0, right:0, height:'3px',
+    background:'linear-gradient(90deg,#e8a838,#f5cd6e)',
+  },
+  cardEmoji: {
+    fontSize:'22px', flexShrink:0, width:'44px', height:'44px', borderRadius:'11px',
+    display:'flex', alignItems:'center', justifyContent:'center',
+    background:'rgba(232,168,56,.14)', border:'1px solid rgba(232,168,56,.28)',
+  },
   cardBody: { display:'flex', flexDirection:'column', gap:'3px', flex:1 },
-  cardName: { fontSize:'15px', fontWeight:700, color:'#e8ede8' },
-  cardDesc: { fontSize:'12px', color:'#9aada6' },
-  cardArrow: { fontSize:'16px', color:'#607570', flexShrink:0, transition:'all .18s' },
-  foot: { maxWidth:'580px', margin:'22px auto 0', textAlign:'center', fontSize:'11.5px', color:'#4a5754', lineHeight:1.6 },
+  cardName: { fontSize:'15px', fontWeight:700, color:'#f2f0ea' },
+  cardDesc: { fontSize:'12px', color:'#9a8f78' },
+  cardArrow: { fontSize:'16px', color:'#6e6455', flexShrink:0, transition:'all .18s' },
+  foot: { maxWidth:'580px', margin:'24px auto 0', textAlign:'center', fontSize:'11.5px', color:'#5a5145', lineHeight:1.6 },
 };
