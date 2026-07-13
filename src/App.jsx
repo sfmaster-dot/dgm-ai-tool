@@ -40,28 +40,34 @@ export default function App() {
 
   return (
     <div style={s.wrap}>
-      {/* 상단 고정 네비게이터 */}
-      <div style={s.nav}>
-        <button style={s.brand} onClick={() => setActive(null)} className='brandBtn'>
-          <span style={{ color: '#f0b942' }}>AI 문구</span> 메이커
-        </button>
-        <div style={s.tabBarWrap}>
-          <div style={s.tabBar} className='tabBar'>
-            {TOOLS.map(t => {
-              const on = active === t.type;
-              return (
-                <button
-                  key={t.type}
-                  onClick={() => setActive(t.type)}
-                  style={{ ...s.tab, ...(on ? s.tabOn : {}) }}
-                  className='navTab'
-                >
-                  <span style={{ fontSize: '13px' }}>{t.emoji}</span>
-                  <span>{t.tab}</span>
-                </button>
-              );
-            })}
+      {/* 헤더: 히어로 → 구분선 → 탭 네비게이션 */}
+      <div style={s.header}>
+        <div style={s.hero}>
+          <div style={s.heroLabel}>단꿈 장사도구</div>
+          <div style={s.heroRow}>
+            <span style={s.heroIcon}>✨</span>
+            <span style={s.heroTitle}>AI 문구 메이커</span>
           </div>
+          <div style={s.heroSub}>배달앱의 가게소개, 메뉴명 SEO, 객단가를 올려주는 메뉴 옵션 설계까지 도와줍니다.</div>
+        </div>
+
+        <div style={s.divider} />
+
+        <div style={s.tabBar} className='tabBar'>
+          {TOOLS.map(t => {
+            const on = active === t.type;
+            return (
+              <button
+                key={t.type}
+                onClick={() => setActive(t.type)}
+                style={{ ...s.tab, ...(on ? s.tabOn : {}) }}
+                className='navTab'
+              >
+                <span style={{ fontSize: '13px' }}>{t.emoji}</span>
+                <span>{t.tab}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -72,7 +78,6 @@ export default function App() {
       }
 
       <style>{`
-        .brandBtn:hover { opacity: .85; }
         .navTab:hover { border-color: rgba(232,168,56,.5) !important; color: #f2f0ea !important; }
         .toolCard:hover { border-color: rgba(232,168,56,.45) !important; background: #1c1811 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
         .toolCard:hover .cardLine { background: linear-gradient(180deg,#eeb040,#e0972a) !important; }
@@ -86,14 +91,6 @@ export default function App() {
 function Home({ tools, onPick }) {
   return (
     <div style={s.body}>
-      <div style={s.hero}>
-        <div style={s.heroLabel}>단꿈 장사도구</div>
-        <div style={s.heroRow}>
-          <span style={s.heroIcon}>🏷️</span>
-          <span style={s.heroTitle}>AI 문구 메이커</span>
-        </div>
-        <div style={s.heroSub}>배달앱의 가게소개, 메뉴명 SEO, 객단가를 올려주는 메뉴 옵션 설계까지 도와줍니다.</div>
-      </div>
       <div style={s.grid}>
         {tools.map(t => (
           <button key={t.type} style={s.card} onClick={() => onPick(t.type)} className='toolCard'>
@@ -119,21 +116,12 @@ const SERIF = "'Nanum Myeongjo', serif";
 const s = {
   wrap: { minHeight:'100%', boxSizing:'border-box', color:'#e8ede8' },
 
-  nav: {
-    position:'sticky', top:0, zIndex:20,
-    background:'rgba(16,13,11,.92)', backdropFilter:'blur(8px)',
-    borderBottom:'1px solid #2a251f',
-    padding:'34px 16px 0',
-  },
-  brand: {
-    display:'block', margin:'0 auto', maxWidth:'760px', width:'100%',
-    background:'none', border:'none', cursor:'pointer', textAlign:'center',
-    fontFamily:SERIF, fontSize:'24px', fontWeight:800, color:'#f2f0ea', letterSpacing:'-.01em',
-    padding:0, transition:'opacity .15s',
-  },
-  tabBarWrap: { maxWidth:'760px', margin:'16px auto 0', overflow:'hidden' },
+  header: { padding:'32px 16px 0' },
+  divider: { maxWidth:'640px', margin:'22px auto 18px', height:'1px', background:'#2a251f' },
+  tabBarWrap: { maxWidth:'640px', margin:'0 auto', overflow:'hidden' },
   tabBar: {
-    display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'12px',
+    display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'2px',
+    maxWidth:'640px', margin:'0 auto',
     scrollbarWidth:'none', msOverflowStyle:'none',
   },
   tab: {
@@ -149,8 +137,8 @@ const s = {
     color:'#1a1408', fontWeight:700, boxShadow:'0 3px 10px rgba(232,168,56,.28)',
   },
 
-  body: { padding:'26px 16px 32px' },
-  hero: { maxWidth:'640px', margin:'0 auto 26px', textAlign:'left' },
+  body: { padding:'22px 16px 32px' },
+  hero: { maxWidth:'640px', margin:'0 auto', textAlign:'left' },
   heroLabel: { fontSize:'12px', fontWeight:700, letterSpacing:'.06em', color:'#f0b942', marginBottom:'12px' },
   heroRow: { display:'flex', alignItems:'center', gap:'14px' },
   heroIcon: {

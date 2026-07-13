@@ -283,8 +283,8 @@ function SelectField({ label, value, onChange, options }) {
 }
 
 const s = {
-  page: { maxWidth:'640px', margin:'0 auto', padding:'28px 16px 32px' },
-  head: { padding:'0 4px 16px', borderBottom:'1px solid #2a251f', marginBottom:'18px' },
-  title: { fontFamily:"'Nanum Myeongjo', serif", fontSize:'20px', fontWeight:800, color:'#f2f0ea' },
-  sub: { fontSize:'12px', color:'#9a8f78', marginTop:'6px' },
+  page: { maxWidth:'640px', margin:'0 auto', padding:'22px 16px 32px' },
+  head: { padding:'0 4px 16px', marginBottom:'18px' },
+  title: { fontFamily:"'Nanum Myeongjo', serif", fontSize:'21px', fontWeight:800, color:'#f2f0ea', lineHeight:1.25 },
+  sub: { fontSize:'12.5px', color:'#9a8f78', marginTop:'7px' },
 };
