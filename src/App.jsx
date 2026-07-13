@@ -43,7 +43,7 @@ export default function App() {
       {/* 상단 고정 네비게이터 */}
       <div style={s.nav}>
         <button style={s.brand} onClick={() => setActive(null)} className='brandBtn'>
-          단꿈 <span style={{ color: "#f0b942" }}>AI 문구</span> 메이커
+          <span style={{ color: '#f0b942' }}>AI 문구</span> 메이커
         </button>
         <div style={s.tabBarWrap}>
           <div style={s.tabBar} className='tabBar'>
@@ -88,8 +88,11 @@ function Home({ tools, onPick }) {
     <div style={s.body}>
       <div style={s.hero}>
         <div style={s.heroLabel}>단꿈 장사도구</div>
-        <div style={s.heroTitle}>AI 문구 메이커</div>
-        <div style={s.heroSub}>가게소개 · 공지 · 메뉴명 · 메뉴설명 · 주문안내 · 옵션설계 — 6가지 문구를 한 곳에서</div>
+        <div style={s.heroRow}>
+          <span style={s.heroIcon}>🏷️</span>
+          <span style={s.heroTitle}>AI 문구 메이커</span>
+        </div>
+        <div style={s.heroSub}>배달앱의 가게소개, 메뉴명 SEO, 객단가를 올려주는 메뉴 옵션 설계까지 도와줍니다.</div>
       </div>
       <div style={s.grid}>
         {tools.map(t => (
@@ -147,10 +150,16 @@ const s = {
   },
 
   body: { padding:'26px 16px 32px' },
-  hero: { maxWidth:'640px', margin:'0 auto 26px', textAlign:'center' },
-  heroLabel: { fontSize:'12px', fontWeight:700, letterSpacing:'.06em', color:'#f0b942', marginBottom:'10px' },
-  heroTitle: { fontFamily:SERIF, fontSize:'32px', fontWeight:800, color:'#f2f0ea', lineHeight:1.25 },
-  heroSub: { fontSize:'13px', color:'#9a8f78', marginTop:'12px' },
+  hero: { maxWidth:'640px', margin:'0 auto 26px', textAlign:'left' },
+  heroLabel: { fontSize:'12px', fontWeight:700, letterSpacing:'.06em', color:'#f0b942', marginBottom:'12px' },
+  heroRow: { display:'flex', alignItems:'center', gap:'14px' },
+  heroIcon: {
+    fontSize:'26px', flexShrink:0, width:'52px', height:'52px', borderRadius:'13px',
+    display:'flex', alignItems:'center', justifyContent:'center',
+    background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.22)',
+  },
+  heroTitle: { fontFamily:SERIF, fontSize:'34px', fontWeight:800, color:'#f2f0ea', lineHeight:1.2 },
+  heroSub: { fontSize:'13.5px', color:'#9a8f78', marginTop:'14px', lineHeight:1.6 },
 
   grid: { maxWidth:'640px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
