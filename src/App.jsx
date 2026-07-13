@@ -1,15 +1,15 @@
 import { useState, useEffect, useLayoutEffect } from 'react';
 import AiForm from './components/AiForm';
 
-// 노출 도구 7종. 카드 진입점이 없으므로 orderguide·menuoption 포함 전부 런처에 노출.
+// 노출 도구 7종. name=긴 이름(그리드/헤더), tab=짧은 이름(탭바)
 const TOOLS = [
-  { type: 'intro',      emoji: '🏪', name: '가게소개 생성',   desc: '200~400자 · 스토리형' },
-  { type: 'notice',     emoji: '📢', name: '사장님공지 생성', desc: '이벤트·휴무·신메뉴' },
-  { type: 'menuname',   emoji: '🍽️', name: '메뉴명 SEO',      desc: '검색 키워드 최적화 3종' },
-  { type: 'menudesc',   emoji: '📝', name: '메뉴설명 후킹',   desc: '60자 이내 · 후킹+구성' },
-  { type: 'reply',      emoji: '💬', name: '리뷰답변 생성',   desc: '별점 기반 톤 자동 조정' },
-  { type: 'orderguide', emoji: '📌', name: '주문안내 생성',   desc: '첫 줄 후크 + 본문' },
-  { type: 'menuoption', emoji: '🧩', name: '메뉴 옵션 설계',  desc: '객단가 +20~40% 레버' },
+  { type: 'intro',      emoji: '🏪', name: '가게소개 생성',   tab: '가게소개', desc: '200~400자 · 스토리형' },
+  { type: 'notice',     emoji: '📢', name: '사장님공지 생성', tab: '공지',     desc: '이벤트·휴무·신메뉴' },
+  { type: 'menuname',   emoji: '🍽️', name: '메뉴명 SEO',      tab: '메뉴명',   desc: '검색 키워드 최적화 3종' },
+  { type: 'menudesc',   emoji: '📝', name: '메뉴설명 후킹',   tab: '메뉴설명', desc: '60자 이내 · 후킹+구성' },
+  { type: 'reply',      emoji: '💬', name: '리뷰답변 생성',   tab: '리뷰답변', desc: '별점 기반 톤 자동 조정' },
+  { type: 'orderguide', emoji: '📌', name: '주문안내 생성',   tab: '주문안내', desc: '첫 줄 후크 + 본문' },
+  { type: 'menuoption', emoji: '🧩', name: '메뉴 옵션 설계',  tab: '옵션설계', desc: '객단가 +20~40% 레버' },
 ];
 
 const VALID = new Set(TOOLS.map(t => t.type));
@@ -30,7 +30,6 @@ function useReportHeight(dep) {
 }
 
 export default function App() {
-  // URL ?type= 프리필 지원 (예: iframe src="...?type=reply") — 특정 도구로 바로 진입 가능
   const initial = (() => {
     const t = new URLSearchParams(window.location.search).get('type');
     return t && VALID.has(t) ? t : null;
@@ -40,23 +39,60 @@ export default function App() {
   useReportHeight(active);
   useEffect(() => { window.scrollTo(0, 0); }, [active]);
 
-  if (active) {
-    return (
-      <div style={s.wrap}>
-        <AiForm type={active} onBack={() => setActive(null)} />
-      </div>
-    );
-  }
-
   return (
     <div style={s.wrap}>
-      <div style={s.header}>
-        <div style={s.brand}>단꿈 <span style={{color:'#f0b942'}}>AI 문구</span> 도구</div>
-        <div style={s.tagline}>배민 사장님을 위한 문구 자동 생성 · 로그인 없이 바로 사용</div>
+      {/* 상단 고정 네비게이터 */}
+      <div style={s.nav}>
+        <button style={s.brand} onClick={() => setActive(null)} className='brandBtn'>
+          단꿈 <span style={{ color: '#f0b942' }}>AI 문구</span> 도구
+        </button>
+        <div style={s.tabBarWrap}>
+          <div style={s.tabBar} className='tabBar'>
+            {TOOLS.map(t => {
+              const on = active === t.type;
+              return (
+                <button
+                  key={t.type}
+                  onClick={() => setActive(t.type)}
+                  style={{ ...s.tab, ...(on ? s.tabOn : {}) }}
+                  className='navTab'
+                >
+                  <span style={{ fontSize: '13px' }}>{t.emoji}</span>
+                  <span>{t.tab}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 본문 */}
+      {active
+        ? <AiForm type={active} tool={TOOLS.find(t => t.type === active)} />
+        : <Home tools={TOOLS} onPick={setActive} />
+      }
+
+      <style>{`
+        .brandBtn:hover { opacity: .85; }
+        .navTab:hover { border-color: rgba(232,168,56,.5) !important; color: #f2f0ea !important; }
+        .toolCard:hover { border-color: rgba(232,168,56,.55) !important; background: #201a15 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+        .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
+        .tabBar::-webkit-scrollbar { height: 0; }
+      `}</style>
+    </div>
+  );
+}
+
+function Home({ tools, onPick }) {
+  return (
+    <div style={s.body}>
+      <div style={s.hero}>
+        <div style={s.heroTitle}>어떤 문구가 필요하세요?</div>
+        <div style={s.heroSub}>배민 사장님을 위한 문구 자동 생성 · 로그인 없이 바로 사용</div>
       </div>
       <div style={s.grid}>
-        {TOOLS.map(t => (
-          <button key={t.type} style={s.card} onClick={() => setActive(t.type)} className='toolCard'>
+        {tools.map(t => (
+          <button key={t.type} style={s.card} onClick={() => onPick(t.type)} className='toolCard'>
             <span style={s.cardLine} />
             <span style={s.cardEmoji}>{t.emoji}</span>
             <span style={s.cardBody}>
@@ -70,19 +106,49 @@ export default function App() {
       <div style={s.foot}>
         생성 결과는 참고용 초안입니다. 사장님만의 정체성을 더해 완성하세요.
       </div>
-      <style>{`
-        .toolCard:hover { border-color: rgba(232,168,56,.55) !important; background: #201a15 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
-        .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
-      `}</style>
     </div>
   );
 }
 
+const SERIF = "'Nanum Myeongjo', serif";
+
 const s = {
-  wrap: { minHeight:'100%', padding:'22px 16px 30px', boxSizing:'border-box', color:'#e8ede8' },
-  header: { maxWidth:'580px', margin:'0 auto 22px', textAlign:'center' },
-  brand: { fontSize:'21px', fontWeight:800, color:'#f2f0ea', letterSpacing:'-.01em' },
-  tagline: { fontSize:'12.5px', color:'#9a8f78', marginTop:'7px' },
+  wrap: { minHeight:'100%', boxSizing:'border-box', color:'#e8ede8' },
+
+  nav: {
+    position:'sticky', top:0, zIndex:20,
+    background:'rgba(16,13,11,.92)', backdropFilter:'blur(8px)',
+    borderBottom:'1px solid #2a251f',
+    padding:'34px 16px 0',
+  },
+  brand: {
+    display:'block', margin:'0 auto', maxWidth:'640px', width:'100%',
+    background:'none', border:'none', cursor:'pointer', textAlign:'center',
+    fontFamily:SERIF, fontSize:'24px', fontWeight:800, color:'#f2f0ea', letterSpacing:'-.01em',
+    padding:0, transition:'opacity .15s',
+  },
+  tabBarWrap: { maxWidth:'640px', margin:'16px auto 0', overflow:'hidden' },
+  tabBar: {
+    display:'flex', gap:'7px', overflowX:'auto', paddingBottom:'12px',
+    scrollbarWidth:'none', msOverflowStyle:'none',
+  },
+  tab: {
+    flexShrink:0, display:'inline-flex', alignItems:'center', gap:'5px',
+    padding:'7px 13px', borderRadius:'999px', whiteSpace:'nowrap',
+    background:'#191614', border:'1px solid #33302a', color:'#9a8f78',
+    fontSize:'12.5px', fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+    transition:'all .15s',
+  },
+  tabOn: {
+    background:'linear-gradient(180deg,#eeb040,#e0972a)', border:'1px solid #e8a838',
+    color:'#1a1408', fontWeight:700, boxShadow:'0 3px 10px rgba(232,168,56,.28)',
+  },
+
+  body: { padding:'26px 16px 32px' },
+  hero: { maxWidth:'580px', margin:'0 auto 22px', textAlign:'center' },
+  heroTitle: { fontFamily:SERIF, fontSize:'22px', fontWeight:800, color:'#f2f0ea' },
+  heroSub: { fontSize:'12.5px', color:'#9a8f78', marginTop:'9px' },
+
   grid: { maxWidth:'580px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
     position:'relative', display:'flex', alignItems:'center', gap:'14px', width:'100%', textAlign:'left',

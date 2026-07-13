@@ -14,7 +14,7 @@ const LABELS = {
 };
 
 // 순수 무로그인 폼. 로그인·매장·aiCache·히스토리 없음. 생성은 100% 폼 입력 기반.
-export default function AiForm({ type, onBack }) {
+export default function AiForm({ type, tool }) {
   const [form, setForm]       = useState({ ...DEFAULT_FORM });
   const [preset, setPreset]   = useState('');
   const [flash, setFlash]     = useState(0);
@@ -81,12 +81,11 @@ export default function AiForm({ type, onBack }) {
   return (
     <div style={s.page}>
       <div style={s.head}>
-        <button style={s.backBtn} onClick={onBack} className='backBtn'>← 도구 선택</button>
-        <div style={s.title}>✨ {LABELS[type]}</div>
+        <div style={s.title}>{tool?.emoji} {LABELS[type]}</div>
         <div style={s.sub}>가게 정보를 입력하면 AI가 문구를 생성해드립니다</div>
       </div>
 
-      <div style={S.mbody}>
+      <div style={{ ...S.mbody, padding: 0 }}>
         {isMenuoption && (
           <div style={S.aphorismBox}>
             <span style={S.aphorismIcon}>💡</span>
@@ -254,7 +253,6 @@ export default function AiForm({ type, onBack }) {
         .rerollBtn:hover .diceIcon { transform: rotate(180deg); }
         .rerollBtn:active { transform: scale(0.95); }
         .guideToggle:hover { background: rgba(232,168,56,.12) !important; }
-        .backBtn:hover { color: #e8a838 !important; }
       `}</style>
     </div>
   );
@@ -285,9 +283,8 @@ function SelectField({ label, value, onChange, options }) {
 }
 
 const s = {
-  page: { maxWidth:'580px', margin:'0 auto' },
-  head: { padding:'4px 20px 16px', borderBottom:'1px solid #2a2f30', marginBottom:'4px' },
-  backBtn: { background:'none', border:'none', color:'#607570', fontSize:'13px', cursor:'pointer', padding:'6px 0', fontFamily:'inherit', transition:'color .2s' },
-  title: { fontSize:'17px', fontWeight:700, color:'#e8ede8', marginTop:'6px' },
-  sub: { fontSize:'12px', color:'#607570', marginTop:'3px' },
+  page: { maxWidth:'580px', margin:'0 auto', padding:'28px 16px 32px' },
+  head: { padding:'0 4px 16px', borderBottom:'1px solid #2a251f', marginBottom:'18px' },
+  title: { fontFamily:"'Nanum Myeongjo', serif", fontSize:'20px', fontWeight:800, color:'#f2f0ea' },
+  sub: { fontSize:'12px', color:'#9a8f78', marginTop:'6px' },
 };
