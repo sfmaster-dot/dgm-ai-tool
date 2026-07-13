@@ -122,19 +122,20 @@ const s = {
     padding:'34px 16px 0',
   },
   brand: {
-    display:'block', margin:'0 auto', maxWidth:'640px', width:'100%',
+    display:'block', margin:'0 auto', maxWidth:'760px', width:'100%',
     background:'none', border:'none', cursor:'pointer', textAlign:'center',
     fontFamily:SERIF, fontSize:'24px', fontWeight:800, color:'#f2f0ea', letterSpacing:'-.01em',
     padding:0, transition:'opacity .15s',
   },
-  tabBarWrap: { maxWidth:'640px', margin:'16px auto 0', overflow:'hidden' },
+  tabBarWrap: { maxWidth:'760px', margin:'16px auto 0', overflow:'hidden' },
   tabBar: {
-    display:'flex', gap:'7px', overflowX:'auto', paddingBottom:'12px',
+    display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'12px',
     scrollbarWidth:'none', msOverflowStyle:'none',
   },
   tab: {
-    flexShrink:0, display:'inline-flex', alignItems:'center', gap:'5px',
-    padding:'7px 13px', borderRadius:'999px', whiteSpace:'nowrap',
+    flex:'1 1 0', minWidth:'max-content',
+    display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px',
+    padding:'8px 12px', borderRadius:'999px', whiteSpace:'nowrap',
     background:'#191614', border:'1px solid #33302a', color:'#9a8f78',
     fontSize:'12.5px', fontWeight:600, cursor:'pointer', fontFamily:'inherit',
     transition:'all .15s',
@@ -145,11 +146,11 @@ const s = {
   },
 
   body: { padding:'26px 16px 32px' },
-  hero: { maxWidth:'580px', margin:'0 auto 22px', textAlign:'center' },
+  hero: { maxWidth:'640px', margin:'0 auto 22px', textAlign:'center' },
   heroTitle: { fontFamily:SERIF, fontSize:'22px', fontWeight:800, color:'#f2f0ea' },
   heroSub: { fontSize:'12.5px', color:'#9a8f78', marginTop:'9px' },
 
-  grid: { maxWidth:'580px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
+  grid: { maxWidth:'640px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
     position:'relative', display:'flex', alignItems:'center', gap:'14px', width:'100%', textAlign:'left',
     background:'#191614', border:'1px solid #34302a', borderRadius:'13px',
@@ -169,5 +170,5 @@ const s = {
   cardName: { fontSize:'15px', fontWeight:700, color:'#f2f0ea' },
   cardDesc: { fontSize:'12px', color:'#9a8f78' },
   cardArrow: { fontSize:'16px', color:'#6e6455', flexShrink:0, transition:'all .18s' },
-  foot: { maxWidth:'580px', margin:'24px auto 0', textAlign:'center', fontSize:'11.5px', color:'#5a5145', lineHeight:1.6 },
+  foot: { maxWidth:'640px', margin:'24px auto 0', textAlign:'center', fontSize:'11.5px', color:'#5a5145', lineHeight:1.6 },
 };
