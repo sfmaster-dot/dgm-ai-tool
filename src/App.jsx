@@ -75,7 +75,8 @@ export default function App() {
       <style>{`
         .brandBtn:hover { opacity: .85; }
         .navTab:hover { border-color: rgba(232,168,56,.5) !important; color: #f2f0ea !important; }
-        .toolCard:hover { border-color: rgba(232,168,56,.55) !important; background: #201a15 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+        .toolCard:hover { border-color: rgba(232,168,56,.45) !important; background: #1c1811 !important; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+        .toolCard:hover .cardLine { background: linear-gradient(180deg,#eeb040,#e0972a) !important; }
         .toolCard:hover .cardArrow { transform: translateX(3px); color:#f0b942 !important; }
         .tabBar::-webkit-scrollbar { height: 0; }
       `}</style>
@@ -93,7 +94,7 @@ function Home({ tools, onPick }) {
       <div style={s.grid}>
         {tools.map(t => (
           <button key={t.type} style={s.card} onClick={() => onPick(t.type)} className='toolCard'>
-            <span style={s.cardLine} />
+            <span style={s.cardLine} className='cardLine' />
             <span style={s.cardEmoji}>{t.emoji}</span>
             <span style={s.cardBody}>
               <span style={s.cardName}>{t.name}</span>
@@ -153,18 +154,18 @@ const s = {
   grid: { maxWidth:'640px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'11px' },
   card: {
     position:'relative', display:'flex', alignItems:'center', gap:'14px', width:'100%', textAlign:'left',
-    background:'#191614', border:'1px solid #34302a', borderRadius:'13px',
+    background:'#16130f', border:'1px solid #29251e', borderRadius:'12px',
     padding:'17px 18px', cursor:'pointer', fontFamily:'inherit', overflow:'hidden',
     transition:'all .18s',
   },
   cardLine: {
-    position:'absolute', top:0, left:0, right:0, height:'3px',
-    background:'linear-gradient(90deg,#e8a838,#f5cd6e)',
+    position:'absolute', top:0, bottom:0, left:0, width:'3px',
+    background:'transparent', transition:'background .18s',
   },
   cardEmoji: {
     fontSize:'22px', flexShrink:0, width:'44px', height:'44px', borderRadius:'11px',
     display:'flex', alignItems:'center', justifyContent:'center',
-    background:'rgba(232,168,56,.14)', border:'1px solid rgba(232,168,56,.28)',
+    background:'rgba(232,168,56,.08)',
   },
   cardBody: { display:'flex', flexDirection:'column', gap:'3px', flex:1 },
   cardName: { fontSize:'15px', fontWeight:700, color:'#f2f0ea' },
