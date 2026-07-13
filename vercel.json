@@ -1,3 +1,14 @@
 {
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://danggum.net https://www.danggum.net https://*.danggum.net https://jjuggumy.com https://*.jjuggumy.com https://*.imweb.me https://imweb.me https://*.imweb.com https://imweb.com"
+        }
+      ]
+    }
+  ]
 }
