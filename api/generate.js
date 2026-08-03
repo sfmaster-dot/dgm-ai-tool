@@ -875,6 +875,13 @@ STEP 3. 자기검증 (출력 직전)
 
 const MENUOPTION_DIAGNOSE_STATIC = `당신은 한국 배달앱(배민·쿠팡이츠) 메뉴 옵션 "진단" 전문가입니다.
 사장님이 현재 배민에 등록해 둔 옵션 구성을 받아, 객단가 관점에서 문제를 짚고 "최소 수정"으로 교정합니다.
+옵션 구성은 텍스트 또는 화면 캡처 이미지(여러 장, 긴 화면의 세로 분할 포함)로 제공될 수 있습니다.
+
+[이미지 판독 원칙]
+- 캡처에서 옵션그룹명 · 필수/선택 · 최소~최대 선택 수 · 옵션명 · 추가금을 정확히 판독한다.
+- 분할된 캡처는 같은 화면의 연속으로 보고 이어서 판독한다. 분할 경계에 중복된 행은 한 번만 센다.
+- 흐릿하거나 잘린 값은 추정하지 말고 "판독 불확실"로 표시하고, 해당 항목은 진단에서 제외했음을 밝힌다.
+- 텍스트와 이미지가 함께 오면 텍스트를 보충 설명으로 함께 반영한다.
 
 ═══════════════════════════════════════════
 [진단 프레임 — 6대 함정]
@@ -916,7 +923,7 @@ function menuoptionMode(storeInfo) {
 function menuoptionUserBlock(storeInfo) {
   const mode = menuoptionMode(storeInfo);
   if (mode === 'board') return `[입력 정보]\n메뉴판 전체:\n${storeInfo.menuBoard}\n\n업종/매장 분위기: ${storeInfo.atmosphere || '한식'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 작업을 시작하라.`;
-  if (mode === 'diagnose') return `[입력 정보]\n현재 등록된 옵션 구성:\n${storeInfo.currentOptions}\n\n메뉴판(참고): ${storeInfo.menuBoard || '미제공'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 진단을 시작하라.`;
+  if (mode === 'diagnose') return `[입력 정보]\n첨부 캡처: ${Array.isArray(storeInfo.images) ? storeInfo.images.length : 0}장\n현재 등록된 옵션 구성(텍스트):\n${storeInfo.currentOptions || '(텍스트 없음 — 첨부된 캡처 이미지를 판독할 것)'}\n\n메뉴판(참고): ${storeInfo.menuBoard || '미제공'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 진단을 시작하라.`;
   return `[입력 정보]\n메뉴명: ${storeInfo.menuName}\n기본 가격: ${storeInfo.basePrice}\n기본 인분: ${storeInfo.basePortion || '1~2인분'}\n토핑 후보: ${storeInfo.toppings || '없음'}\n사이드 후보: ${storeInfo.sides || '없음'}\n음료 후보: ${storeInfo.drinks || '없음'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 작업을 시작하라.`;
 }
 
@@ -1127,6 +1134,11 @@ ${storeInfo.text}`,
   const moMode = menuoptionMode(storeInfo);
   const isImprove = storeInfo.workMode === 'improve' && VARIANT_TYPES.has(type);
   const isVariant = !isImprove && VARIANT_TYPES.has(type);
+  const diagImages = (type === 'menuoption' && moMode === 'diagnose' && Array.isArray(storeInfo.images))
+    ? storeInfo.images.slice(0, 6).filter(im => im && im.data && im.media_type)
+    : [];
+  if (diagImages.reduce((n, im) => n + im.data.length, 0) > 5000000)
+    return res.status(413).json({ error: '이미지 용량이 너무 큽니다. 캡처 장수를 줄여 다시 시도해주세요.' });
   if (type !== 'menuoption' && !prompts[type]) return res.status(400).json({ error: '알 수 없는 요청 유형입니다.' });
 
   // type별 max_tokens 정책 (menuoption은 JSON 기계 블록 추가분 반영)
@@ -1173,6 +1185,7 @@ ${storeInfo.text}`,
           content: type === 'menuoption'
             ? [
                 { type: 'text', text: MENUOPTION_STATIC[moMode], cache_control: { type: 'ephemeral' } },
+                ...diagImages.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
                 { type: 'text', text: menuoptionUserBlock(storeInfo) }
               ]
             : isImprove

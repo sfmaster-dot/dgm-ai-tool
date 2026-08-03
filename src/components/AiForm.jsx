@@ -62,6 +62,37 @@ function extractFinal(raw) {
   return raw.slice(i + M.length).replace(/^[\s:]+/, '').trim();
 }
 
+// ── 캡처 업로드: 폭 1100px 정규화 + 긴 캡처 자동 세로 분할(경계 60px 겹침) ──
+function processCapture(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const W = Math.min(img.width, 1100);
+      const scale = W / img.width;
+      const H = Math.round(img.height * scale);
+      const chunkH = Math.round(W * 2);
+      const overlap = 60;
+      const pieces = [];
+      let y = 0;
+      while (y < H && pieces.length < 6) {
+        const h = Math.min(chunkH, H - y);
+        const c = document.createElement('canvas');
+        c.width = W; c.height = h;
+        c.getContext('2d').drawImage(img, 0, y / scale, img.width, h / scale, 0, 0, W, h);
+        const dataUrl = c.toDataURL('image/jpeg', 0.85);
+        pieces.push({ media_type: 'image/jpeg', data: dataUrl.split(',')[1], preview: dataUrl });
+        if (y + h >= H) break;
+        y += chunkH - overlap;
+      }
+      resolve(pieces);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 읽기 실패')); };
+    img.src = url;
+  });
+}
+
 // 세션 폼 — 탭을 오가도 입력 유지 (저장 없음, 새로고침 시 초기화)
 let sessionForm = null;
 import { S } from '../data/styles';
@@ -87,9 +118,11 @@ export default function AiForm({ type, tool, bare }) {
   const [copiedG, setCopiedG] = useState(null);       // 그룹 복사 상태 (index | 'all')
   const [variants, setVariants] = useState(null);     // 3안 결과
   const [refining, setRefining] = useState(false);    // 다듬기 진행 중
+  const [images, setImages]   = useState([]);         // 진단 캡처 (base64 조각)
+  const [imgBusy, setImgBusy] = useState(false);
 
   useEffect(() => { sessionForm = form; }, [form]);
-  useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); }, [type]);
+  useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); setImages([]); }, [type]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied]   = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -118,15 +151,23 @@ export default function AiForm({ type, tool, bare }) {
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
-      menuoption: form.mode === 'board' ? ['menuBoard'] : form.mode === 'diagnose' ? ['currentOptions'] : ['menuName','basePrice'],
+      menuoption: form.mode === 'board' ? ['menuBoard'] : form.mode === 'diagnose' ? [] : ['menuName','basePrice'],
       reply:      ['storeName','review','rating'],
     }[type] || []);
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
+    if (type === 'menuoption' && form.mode === 'diagnose' && !form.currentOptions && images.length === 0) {
+      alert('옵션 화면 캡처를 올리거나, 옵션 구성을 텍스트로 붙여넣어 주세요.'); return;
+    }
     setLoading(true); setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false);
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, storeInfo: form }),
+        body: JSON.stringify({
+          type,
+          storeInfo: (type === 'menuoption' && form.mode === 'diagnose')
+            ? { ...form, images: images.map(({ media_type, data }) => ({ media_type, data })) }
+            : form,
+        }),
       });
       if (res.status === 429) {
         setResult('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
@@ -167,6 +208,20 @@ export default function AiForm({ type, tool, bare }) {
       if (data.result) setResult(data.result.trim());
     } catch { /* 유지 */ }
     setRefining(false);
+  }
+
+  async function addImages(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    setImgBusy(true);
+    const added = [];
+    for (const file of files) {
+      if (images.length + added.length >= 6) break;
+      try { added.push(...await processCapture(file)); }
+      catch { alert(`${file.name} 처리에 실패했습니다.`); }
+    }
+    setImages(prev => [...prev, ...added].slice(0, 6));
+    setImgBusy(false);
   }
 
   const showPreset = ['intro','notice','menuname','menudesc'].includes(type) && form.workMode !== 'improve';
@@ -323,8 +378,27 @@ export default function AiForm({ type, tool, bare }) {
           </>}
 
           {form.mode === 'diagnose' && <>
+            <div style={S.field}>
+              <label style={S.flabel}>배민 옵션 화면 캡처 ★ 추천 <span style={{color:'#607570',fontWeight:400}}>(최대 6장 · 긴 캡처는 자동 분할)</span></label>
+              <input id='diagImgInput' type='file' accept='image/*' multiple style={{ display:'none' }}
+                onChange={e => { addImages(e.target.files); e.target.value=''; }} />
+              <button style={ii.pickBtn} className='gcopy' onClick={() => document.getElementById('diagImgInput').click()} disabled={imgBusy}>
+                📷 캡처 업로드
+              </button>
+              {imgBusy && <span style={ii.busy}> 이미지 처리 중…</span>}
+              {images.length > 0 && (
+                <div style={ii.thumbRow}>
+                  {images.map((im, i) => (
+                    <div key={i} style={ii.thumb}>
+                      <img src={im.preview} alt='' style={ii.thumbImg} />
+                      <button style={ii.thumbX} onClick={() => setImages(arr => arr.filter((_, j) => j !== i))}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <Field
-              label="현재 등록된 옵션 구성 *"
+              label="옵션 구성 텍스트 (캡처 없이 텍스트만도 가능)"
               placeholder={`배민 셀프서비스(사장님광장) 옵션 화면을 그대로 옮겨 적으세요. 형식 자유. 예:
 
 [필수] 맵기 선택 (1개)
@@ -556,4 +630,14 @@ const vt = {
   chipLabel: { fontSize:'11px', fontWeight:700, color:'#9a8f78', marginRight:'2px' },
   chip: { background:'#1e1a14', border:'1px solid #33302a', color:'#c9c2b4', fontSize:'11.5px', fontWeight:600, padding:'5px 11px', borderRadius:'999px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
   chipBusy: { fontSize:'11px', color:'#f0b942' },
+};
+
+// 캡처 업로드 스타일
+const ii = {
+  pickBtn: { background:'rgba(232,168,56,.1)', border:'1px dashed rgba(232,168,56,.45)', color:'#f0b942', fontSize:'12.5px', fontWeight:700, padding:'9px 16px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  busy: { fontSize:'11.5px', color:'#f0b942' },
+  thumbRow: { display:'flex', gap:'8px', flexWrap:'wrap', marginTop:'10px' },
+  thumb: { position:'relative', width:'64px', height:'96px', borderRadius:'8px', overflow:'hidden', border:'1px solid #34302a', background:'#0d0b09' },
+  thumbImg: { width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' },
+  thumbX: { position:'absolute', top:'3px', right:'3px', width:'18px', height:'18px', borderRadius:'50%', background:'rgba(0,0,0,.65)', border:'none', color:'#f2f0ea', fontSize:'10px', cursor:'pointer', lineHeight:1, padding:0 },
 };
