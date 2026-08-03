@@ -58,7 +58,7 @@ function CopyMaker() {
             <span style={s.heroIcon}>✨</span>
             <span style={s.heroTitle}>AI 문구 메이커</span>
           </div>
-          <div style={s.heroSub}>배달앱의 가게소개, 공지, 메뉴명 SEO, 메뉴설명까지 문구를 자동으로 만들어드립니다.</div>
+          <div style={s.heroSub}>새 문구 생성부터 기존 문구 진단·교정, 원터치 다듬기까지 — 배달앱 문구를 완성해드립니다.</div>
         </div>
 
         <div style={s.divider} />
@@ -122,7 +122,7 @@ function OptionMaker() {
             <span style={s.heroIcon}>🧩</span>
             <span style={s.heroTitle}>메뉴 옵션 메이커</span>
           </div>
-          <div style={s.heroSub}>메뉴 구성·토핑·사이드·세트를 전략적으로 설계해 객단가를 끌어올립니다.</div>
+          <div style={s.heroSub}>옵션 트리 설계부터 지금 등록된 옵션 구성 진단·교정까지, 객단가를 끌어올립니다.</div>
         </div>
         <div style={s.divider} />
       </div>

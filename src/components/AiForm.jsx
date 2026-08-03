@@ -1,5 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PRESETS, MENUOPTION_GUIDES, DEFAULT_FORM, pick } from '../data/presets';
+
+// ── menuoption 구조화 결과 파서 ──
+// 본문 뒤 <<<JSON>>> 구분자 이후의 JSON을 분리. 실패 시 전체를 텍스트로 폴백.
+function splitStructured(raw) {
+  const M = '<<<JSON>>>';
+  const i = raw.lastIndexOf(M);
+  if (i === -1) return { text: raw, json: null };
+  const text = raw.slice(0, i).trim();
+  let t = raw.slice(i + M.length).replace(/```json|```/g, '').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a === -1 || b === -1) return { text: raw, json: null };
+  try {
+    const json = JSON.parse(t.slice(a, b + 1));
+    if (!json || !Array.isArray(json.optionGroups)) return { text: raw, json: null };
+    return { text, json };
+  } catch { return { text: raw, json: null }; }
+}
+
+const won = (n) => (typeof n === 'number' ? n.toLocaleString('ko-KR') : (n ?? ''));
+
+function groupToText(g) {
+  const head = `【${g.name}】 ${g.required ? '필수' : '선택'} · 최소 ${g.min ?? 0}개 ~ 최대 ${g.max ?? 1}개`;
+  const rows = (g.options || []).map(o => `- ${o.name}  +${won(o.price)}원${o.note ? `  (${o.note})` : ''}`);
+  return [head, ...rows].join('\n');
+}
+function allGroupsText(json) {
+  return (json.optionGroups || []).map(groupToText).join('\n\n');
+}
+
+// ── AI 문구 메이커: 다안·개선·다듬기 ──
+const IMPROVABLE = new Set(['intro', 'notice', 'menudesc', 'orderguide']);
+const CHIP_TYPES = IMPROVABLE;
+const CHIPS = [
+  { label: '더 짧게',       instr: '전체 길이를 30% 이상 줄여 더 짧고 임팩트 있게.' },
+  { label: '더 정감있게',   instr: '말투를 더 따뜻하고 정감 있게.' },
+  { label: '더 전문적으로', instr: '말투를 더 전문적이고 신뢰감 있게.' },
+  { label: '이모지 빼기',   instr: '이모지를 모두 제거.' },
+  { label: '이모지 넣기',   instr: '과하지 않게 이모지를 몇 개만 추가.' },
+];
+
+// <<<안|톤>>> 구분자로 3안 파싱. 2개 미만이면 null(단일 텍스트 폴백)
+function parseVariants(raw) {
+  const re = /<<<안\|(.+?)>>>/g;
+  const marks = []; let m;
+  while ((m = re.exec(raw))) marks.push({ label: m[1].trim(), start: m.index, end: re.lastIndex });
+  if (marks.length < 2) return null;
+  const out = [];
+  for (let i = 0; i < marks.length; i++) {
+    const text = raw.slice(marks[i].end, i + 1 < marks.length ? marks[i + 1].start : raw.length).trim();
+    if (text) out.push({ label: marks[i].label, text });
+  }
+  return out.length >= 2 ? out : null;
+}
+
+// 개선 모드 결과에서 교정본만 추출 (복사·다듬기·글자수 대상)
+function extractFinal(raw) {
+  const M = '【교정본】';
+  const i = raw.indexOf(M);
+  if (i === -1) return raw.trim();
+  return raw.slice(i + M.length).replace(/^[\s:]+/, '').trim();
+}
+
+// 세션 폼 — 탭을 오가도 입력 유지 (저장 없음, 새로고침 시 초기화)
+let sessionForm = null;
 import { S } from '../data/styles';
 
 // type → 헤더 라벨. App의 도구 그리드와 동일한 표기.
@@ -15,10 +79,17 @@ const LABELS = {
 
 // 순수 무로그인 폼. 로그인·매장·aiCache·히스토리 없음. 생성은 100% 폼 입력 기반.
 export default function AiForm({ type, tool, bare }) {
-  const [form, setForm]       = useState({ ...DEFAULT_FORM });
+  const [form, setForm]       = useState(() => sessionForm ? { ...sessionForm } : { ...DEFAULT_FORM });
   const [preset, setPreset]   = useState('');
   const [flash, setFlash]     = useState(0);
   const [result, setResult]   = useState('');
+  const [structured, setStructured] = useState(null); // menuoption JSON 결과
+  const [copiedG, setCopiedG] = useState(null);       // 그룹 복사 상태 (index | 'all')
+  const [variants, setVariants] = useState(null);     // 3안 결과
+  const [refining, setRefining] = useState(false);    // 다듬기 진행 중
+
+  useEffect(() => { sessionForm = form; }, [form]);
+  useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); }, [type]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied]   = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -41,17 +112,17 @@ export default function AiForm({ type, tool, bare }) {
   }
 
   async function generate() {
-    const required = {
+    const required = (form.workMode === 'improve' && IMPROVABLE.has(type)) ? ['currentCopy'] : ({
       intro:      ['category','mainMenu'],
       orderguide: ['storeName','firstLine'],
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
-      menuoption: form.mode === 'board' ? ['menuBoard'] : ['menuName','basePrice'],
+      menuoption: form.mode === 'board' ? ['menuBoard'] : form.mode === 'diagnose' ? ['currentOptions'] : ['menuName','basePrice'],
       reply:      ['storeName','review','rating'],
-    }[type] || [];
+    }[type] || []);
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
-    setLoading(true); setResult('');
+    setLoading(true); setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false);
     try {
       const res = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -63,17 +134,42 @@ export default function AiForm({ type, tool, bare }) {
         return;
       }
       const data = await res.json();
-      setResult(data.result || data.error || '오류가 발생했습니다.');
+      const raw = data.result || data.error || '오류가 발생했습니다.';
+      if (type === 'menuoption') {
+        const { text, json } = splitStructured(raw);
+        setResult(text); setStructured(json);
+      } else if (IMPROVABLE.has(type) && form.workMode !== 'improve') {
+        const v = parseVariants(raw);
+        if (v) { setVariants(v); setResult(''); }
+        else { setResult(raw); }
+        setStructured(null);
+      } else { setResult(raw); setStructured(null); }
     } catch { setResult('서버 연결 오류가 발생했습니다.'); }
     setLoading(false);
   }
 
   function copy() {
-    navigator.clipboard.writeText(result);
+    navigator.clipboard.writeText(extractFinal(result));
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   }
 
-  const showPreset = ['intro','notice','menuname','menudesc'].includes(type);
+  async function refine(instruction) {
+    const base = extractFinal(result);
+    if (!base || refining) return;
+    setRefining(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'refine', storeInfo: { target: type, instruction, text: base } }),
+      });
+      if (res.status === 429) { alert('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'); setRefining(false); return; }
+      const data = await res.json();
+      if (data.result) setResult(data.result.trim());
+    } catch { /* 유지 */ }
+    setRefining(false);
+  }
+
+  const showPreset = ['intro','notice','menuname','menudesc'].includes(type) && form.workMode !== 'improve';
   const flashStyle = { background: flash ? 'rgba(232,168,56,.18)' : '#0d0f10', transition: 'background .4s' };
   const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
   const isMenuoption = type === 'menuoption';
@@ -98,6 +194,26 @@ export default function AiForm({ type, tool, bare }) {
           </div>
         )}
 
+        {IMPROVABLE.has(type) && (
+          <div style={S.modeTabs}>
+            <button style={{...S.modeTab, ...(form.workMode !== 'improve' ? S.modeTabActive : {})}} onClick={() => set('workMode', 'new')} className='modeTab'>✍️ 새로 만들기</button>
+            <button style={{...S.modeTab, ...(form.workMode === 'improve' ? S.modeTabActive : {})}} onClick={() => set('workMode', 'improve')} className='modeTab'>✏️ 기존 문구 개선</button>
+          </div>
+        )}
+
+        {IMPROVABLE.has(type) && form.workMode === 'improve' && <>
+          <Field
+            label="현재 문구 *"
+            placeholder={`지금 배민에 등록돼 있는 문구를 그대로 붙여넣으세요.
+약점을 진단하고, 담긴 사실·정체성은 살려서 교정해드립니다.`}
+            value={form.currentCopy}
+            onChange={v=>set('currentCopy',v)}
+            textarea tall
+            flash={flashStyle}
+          />
+          <Field label="강조하고 싶은 점 (선택)" placeholder="예: 국내산 재료를 더 부각, 신메뉴 언급 추가" value={form.emphasis} onChange={v=>set('emphasis',v)} flash={flashStyle} />
+        </>}
+
         {showPreset && (
           <div style={S.presetWrap}>
             <label style={S.presetLabel}>⚡ 업종 프리셋 <span style={{color:'#607570',fontWeight:400}}>(선택 시 자동 채움 · 🎲로 다른 조합)</span></label>
@@ -116,7 +232,7 @@ export default function AiForm({ type, tool, bare }) {
           </div>
         )}
 
-        {type==='intro' && <>
+        {type==='intro' && form.workMode !== 'improve' && <>
           <div style={S.row}>
             <Field label="업종 *" placeholder="예: 제육볶음 전문점, 치킨집" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
             <Field label="대표 메뉴 *" placeholder="예: 직화 제육볶음, 후라이드" value={form.mainMenu} onChange={v=>set('mainMenu',v)} flash={flashStyle} />
@@ -125,7 +241,7 @@ export default function AiForm({ type, tool, bare }) {
           <Field label="운영 특이사항" placeholder="예: 1인분 주문 가능, 새벽 영업, 단체 주문 환영" value={form.style} onChange={v=>set('style',v)} flash={flashStyle} />
         </>}
 
-        {type==='notice' && <>
+        {type==='notice' && form.workMode !== 'improve' && <>
           <Field label="가게명·업종 *" placeholder="예: 영일이아구찜 김해점 (아구찜 전문점)" value={form.storeName} onChange={v=>set('storeName',v)} flash={flashStyle} />
           <Field label="매장 스토리·비법·정성 *" placeholder="예: 15년 경력 사장님이 매일 새벽 어시장에서 직접 손질한 국산 아구만 사용" value={form.story} onChange={v=>set('story',v)} textarea flash={flashStyle} />
           <Field label="진행 중인 이벤트" placeholder="예: 리뷰이벤트 (수제만두 4개 증정), 첫 주문 2,000원 쿠폰" value={form.event} onChange={v=>set('event',v)} textarea flash={flashStyle} />
@@ -144,13 +260,13 @@ export default function AiForm({ type, tool, bare }) {
           </div>
         </>}
 
-        {type==='menudesc' && <>
+        {type==='menudesc' && form.workMode !== 'improve' && <>
           <Field label="메뉴명 *" placeholder="예: 직화 불향 제육볶음" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
           <Field label="맛·식감 *" placeholder="예: 불향 가득한 촉촉한 제육, 매콤달콤" value={form.taste} onChange={v=>set('taste',v)} flash={flashStyle} />
           <Field label="구성·용량" placeholder="예: 공기밥 포함, 350g, 1~2인분" value={form.compose} onChange={v=>set('compose',v)} flash={flashStyle} />
         </>}
 
-        {type==='orderguide' && <>
+        {type==='orderguide' && form.workMode !== 'improve' && <>
           <Field label="가게명·업종 *" placeholder="예: 영일이아구찜 (아구찜 전문점)" value={form.storeName} onChange={v=>set('storeName',v)} flash={flashStyle} />
           <Field label="첫 줄 후크 *" placeholder="예: 「배달팁 0원 + 리뷰 사이드 4종」 30년 비법 시그니처" value={form.firstLine} onChange={v=>set('firstLine',v)} flash={flashStyle} />
           <Field label="진행 중인 이벤트·할인" placeholder="예: 즉시할인 5,000원, 첫 주문 쿠폰, 리뷰 이벤트" value={form.event} onChange={v=>set('event',v)} flash={flashStyle} />
@@ -160,11 +276,12 @@ export default function AiForm({ type, tool, bare }) {
 
         {type==='menuoption' && <>
           <div style={S.modeTabs}>
-            <button style={{...S.modeTab, ...(form.mode !== 'board' ? S.modeTabActive : {})}} onClick={() => set('mode', 'single')} className='modeTab'>단일 메뉴</button>
+            <button style={{...S.modeTab, ...(form.mode !== 'board' && form.mode !== 'diagnose' ? S.modeTabActive : {})}} onClick={() => set('mode', 'single')} className='modeTab'>단일 메뉴</button>
             <button style={{...S.modeTab, ...(form.mode === 'board' ? S.modeTabActive : {})}} onClick={() => set('mode', 'board')} className='modeTab'>📋 메뉴판 전체 ★</button>
+            <button style={{...S.modeTab, ...(form.mode === 'diagnose' ? S.modeTabActive : {})}} onClick={() => set('mode', 'diagnose')} className='modeTab'>🔍 옵션 진단</button>
           </div>
 
-          {form.mode !== 'board' && <>
+          {form.mode !== 'board' && form.mode !== 'diagnose' && <>
             <div style={S.row}>
               <Field label="메뉴명 *" placeholder="예: 불향차돌떡볶이" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
               <Field label="기본 가격 *" placeholder="예: 18,000원 또는 18000" value={form.basePrice} onChange={v=>set('basePrice',v)} flash={flashStyle} />
@@ -204,6 +321,31 @@ export default function AiForm({ type, tool, bare }) {
               <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
             </div>
           </>}
+
+          {form.mode === 'diagnose' && <>
+            <Field
+              label="현재 등록된 옵션 구성 *"
+              placeholder={`배민 셀프서비스(사장님광장) 옵션 화면을 그대로 옮겨 적으세요. 형식 자유. 예:
+
+[필수] 맵기 선택 (1개)
+- 순한맛 0원 / 중간맛 0원 / 아주매운맛 0원
+[선택] 토핑 추가 (최대 3개)
+- 모짜렐라치즈 2,000원
+- 차돌박이 3,900원
+[선택] 사이드 (최대 2개)
+- 군만두 5,000원
+- 김말이튀김 5,000원`}
+              value={form.currentOptions}
+              onChange={v=>set('currentOptions',v)}
+              textarea tall
+              flash={flashStyle}
+            />
+            <Field label="메뉴판 (선택)" placeholder="메뉴판도 주시면 빠진 레버를 더 정확히 짚습니다" value={form.menuBoard} onChange={v=>set('menuBoard',v)} textarea flash={flashStyle} />
+            <div style={S.row}>
+              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
+              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
+            </div>
+          </>}
         </>}
 
         {type==='reply' && <>
@@ -216,9 +358,30 @@ export default function AiForm({ type, tool, bare }) {
           {loading ? '생성 중...' : '✨ 문구 생성하기'}
         </button>
 
+        {variants && (
+          <div style={vt.wrap}>
+            <div style={vt.title}>3가지 톤 — 마음에 드는 안을 고르세요</div>
+            {variants.map((v, i) => (
+              <div key={i} style={vt.card}>
+                <div style={vt.head}>
+                  <span style={vt.vlabel}>{v.label}</span>
+                  <span style={vt.count}>{v.text.length}자</span>
+                  <button style={vt.btn} className='gcopy' onClick={() => { navigator.clipboard.writeText(v.text); setCopiedG('v' + i); setTimeout(() => setCopiedG(null), 1500); }}>
+                    {copiedG === 'v' + i ? '✓ 복사됨' : '복사'}
+                  </button>
+                  <button style={{ ...vt.btn, ...vt.btnMain }} onClick={() => { setResult(v.text); setVariants(null); }}>
+                    이 안으로 다듬기
+                  </button>
+                </div>
+                <pre style={vt.vtext}>{v.text}</pre>
+              </div>
+            ))}
+          </div>
+        )}
+
         {result && (
           <div style={S.resultWrap}>
-            <div style={S.resultLabel}>생성된 문구</div>
+            <div style={S.resultLabel}>생성된 문구 · {extractFinal(result).length}자</div>
             <pre style={S.resultText}>{result}</pre>
             {showIdentityHint && (
               <div style={S.resultHint}>💡 이 제안에서 영감과 힌트를 얻어 사장님만의 정체성을 더해주세요</div>
@@ -227,6 +390,64 @@ export default function AiForm({ type, tool, bare }) {
               <button style={S.copyBtn} onClick={copy}>{copied ? '✓ 복사됨' : '복사하기'}</button>
               <button style={S.regenBtn} onClick={generate}>다시 생성</button>
             </div>
+            {CHIP_TYPES.has(type) && (
+              <div style={vt.chipRow}>
+                <span style={vt.chipLabel}>다듬기</span>
+                {CHIPS.map(c => (
+                  <button key={c.label} disabled={refining} style={{ ...vt.chip, opacity: refining ? 0.45 : 1 }} className='gcopy' onClick={() => refine(c.instr)}>
+                    {c.label}
+                  </button>
+                ))}
+                {refining && <span style={vt.chipBusy}>다듬는 중…</span>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {structured && (
+          <div style={st.wrap}>
+            <div style={st.secTitle}>📋 배민 입력 규격 — 그대로 옮겨 적으세요</div>
+            {(structured.optionGroups || []).map((g, i) => (
+              <div key={i} style={st.gcard}>
+                <div style={st.ghead}>
+                  <span style={{ ...st.badge, ...(g.required ? st.badgeReq : st.badgeOpt) }}>{g.required ? '필수' : '선택'}</span>
+                  <span style={st.gname}>{g.name}</span>
+                  <span style={st.gminmax}>최소 {g.min ?? 0} ~ 최대 {g.max ?? 1}</span>
+                  <button style={st.gcopy} className='gcopy' onClick={() => { navigator.clipboard.writeText(groupToText(g)); setCopiedG(i); setTimeout(() => setCopiedG(null), 1600); }}>
+                    {copiedG === i ? '✓ 복사됨' : '복사'}
+                  </button>
+                </div>
+                {g.purpose && <div style={st.gpurpose}>{g.purpose}</div>}
+                {(g.options || []).map((o, j) => (
+                  <div key={j} style={st.orow}>
+                    <span style={st.oname}>{o.name}</span>
+                    {o.note && <span style={st.onote}>{o.note}</span>}
+                    <span style={st.oprice}>+{won(o.price)}원</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <button style={st.copyAll} className='gcopy' onClick={() => { navigator.clipboard.writeText(allGroupsText(structured)); setCopiedG('all'); setTimeout(() => setCopiedG(null), 1600); }}>
+              {copiedG === 'all' ? '✓ 전체 구성 복사됨' : '전체 구성 복사'}
+            </button>
+
+            {structured.simulation && Array.isArray(structured.simulation.scenarios) && structured.simulation.scenarios.length > 0 && (
+              <div style={st.sim}>
+                <div style={st.secTitle}>📊 객단가 시뮬레이션</div>
+                {structured.simulation.note && <div style={st.simNote}>{structured.simulation.note}</div>}
+                {structured.simulation.scenarios.map((sc, i) => (
+                  <div key={i} style={st.simRow}>
+                    <div style={st.simTop}>
+                      <span style={st.simLabel}>{sc.label}</span>
+                      <span style={st.simAov}>{won(sc.aovBefore)}원 → <b style={{ color: '#f0b942' }}>{won(sc.aovAfter)}원</b></span>
+                      <span style={st.simLift}>+{sc.liftPct}%</span>
+                    </div>
+                    {sc.assumption && <div style={st.simAssume}>{sc.assumption}</div>}
+                  </div>
+                ))}
+                <div style={st.simCaution}>* 선택률 가정 기반 추정치입니다. 실제 결과와 다를 수 있습니다.</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -260,13 +481,13 @@ export default function AiForm({ type, tool, bare }) {
   );
 }
 
-function Field({ label, placeholder, value, onChange, textarea, flash }) {
+function Field({ label, placeholder, value, onChange, textarea, tall, flash }) {
   const inputStyle = { ...S.finput, ...(flash || {}) };
   return (
     <div style={S.field}>
       <label style={S.flabel}>{label}</label>
       {textarea
-        ? <textarea style={{ ...inputStyle, height:'80px', resize:'vertical' }} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
+        ? <textarea style={{ ...inputStyle, height: tall ? '190px' : '80px', resize:'vertical' }} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
         : <input style={inputStyle} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
       }
     </div>
@@ -289,4 +510,50 @@ const s = {
   head: { padding:'0 4px 16px', marginBottom:'18px' },
   title: { fontFamily:"'Nanum Myeongjo', serif", fontSize:'21px', fontWeight:800, color:'#f2f0ea', lineHeight:1.25 },
   sub: { fontSize:'12.5px', color:'#9a8f78', marginTop:'7px' },
+};
+
+// 구조화 결과(배민 규격 카드·시뮬레이션) 전용 스타일
+const st = {
+  wrap: { marginTop:'16px', display:'flex', flexDirection:'column', gap:'10px' },
+  secTitle: { fontSize:'13.5px', fontWeight:800, color:'#f0b942', margin:'6px 0 2px' },
+  gcard: { background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
+  ghead: { display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' },
+  badge: { fontSize:'10.5px', fontWeight:800, padding:'3px 8px', borderRadius:'999px', flexShrink:0 },
+  badgeReq: { background:'rgba(232,90,60,.15)', color:'#f08a6a', border:'1px solid rgba(232,90,60,.3)' },
+  badgeOpt: { background:'rgba(232,168,56,.13)', color:'#f0b942', border:'1px solid rgba(232,168,56,.3)' },
+  gname: { fontSize:'14px', fontWeight:700, color:'#f2f0ea', flex:1 },
+  gminmax: { fontSize:'11px', color:'#9a8f78', flexShrink:0 },
+  gcopy: { flexShrink:0, background:'none', border:'1px solid rgba(232,168,56,.4)', color:'#f0b942', fontSize:'11px', fontWeight:700, padding:'4px 10px', borderRadius:'7px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  gpurpose: { fontSize:'11.5px', color:'#9a8f78', marginBottom:'8px' },
+  orow: { display:'flex', alignItems:'center', gap:'8px', padding:'6px 2px', borderTop:'1px solid #24211b' },
+  oname: { fontSize:'13px', color:'#e8ede8', flex:1 },
+  onote: { fontSize:'10.5px', color:'#9a8f78', background:'#1e1a14', border:'1px solid #2c281f', padding:'2px 7px', borderRadius:'999px', flexShrink:0 },
+  oprice: { fontSize:'13px', fontWeight:700, color:'#f0b942', flexShrink:0, minWidth:'72px', textAlign:'right' },
+  copyAll: { width:'100%', background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.35)', color:'#f0b942', fontSize:'13px', fontWeight:700, padding:'10px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  sim: { marginTop:'6px', background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
+  simNote: { fontSize:'12px', color:'#9a8f78', marginBottom:'8px', lineHeight:1.55 },
+  simRow: { borderTop:'1px solid #24211b', padding:'8px 2px' },
+  simTop: { display:'flex', alignItems:'center', gap:'10px' },
+  simLabel: { fontSize:'11px', fontWeight:800, color:'#e8ede8', background:'#1e1a14', border:'1px solid #2c281f', padding:'3px 9px', borderRadius:'999px', flexShrink:0 },
+  simAov: { fontSize:'13px', color:'#c9c2b4', flex:1 },
+  simLift: { fontSize:'13px', fontWeight:800, color:'#f0b942', flexShrink:0 },
+  simAssume: { fontSize:'11.5px', color:'#8a8070', marginTop:'4px' },
+  simCaution: { fontSize:'10.5px', color:'#6e6455', marginTop:'10px' },
+};
+
+// 3안 카드·다듬기 칩 스타일
+const vt = {
+  wrap: { marginTop:'14px', display:'flex', flexDirection:'column', gap:'10px' },
+  title: { fontSize:'13.5px', fontWeight:800, color:'#f0b942' },
+  card: { background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
+  head: { display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px', flexWrap:'wrap' },
+  vlabel: { fontSize:'11px', fontWeight:800, color:'#f0b942', background:'rgba(232,168,56,.12)', border:'1px solid rgba(232,168,56,.3)', padding:'3px 10px', borderRadius:'999px' },
+  count: { fontSize:'11px', color:'#9a8f78', flex:1 },
+  btn: { background:'none', border:'1px solid rgba(232,168,56,.4)', color:'#f0b942', fontSize:'11px', fontWeight:700, padding:'4px 10px', borderRadius:'7px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  btnMain: { background:'rgba(232,168,56,.12)' },
+  vtext: { margin:0, fontSize:'13px', lineHeight:1.7, color:'#e8ede8', whiteSpace:'pre-wrap', wordBreak:'break-word', fontFamily:'inherit' },
+  chipRow: { display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', marginTop:'10px', paddingTop:'10px', borderTop:'1px solid #24211b' },
+  chipLabel: { fontSize:'11px', fontWeight:700, color:'#9a8f78', marginRight:'2px' },
+  chip: { background:'#1e1a14', border:'1px solid #33302a', color:'#c9c2b4', fontSize:'11.5px', fontWeight:600, padding:'5px 11px', borderRadius:'999px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  chipBusy: { fontSize:'11px', color:'#f0b942' },
 };
