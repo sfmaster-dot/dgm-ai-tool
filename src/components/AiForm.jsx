@@ -120,6 +120,7 @@ export default function AiForm({ type, tool, bare }) {
   const [refining, setRefining] = useState(false);    // 다듬기 진행 중
   const [images, setImages]   = useState([]);         // 진단 캡처 (base64 조각)
   const [imgBusy, setImgBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => { sessionForm = form; }, [form]);
   useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); setImages([]); }, [type]);
@@ -379,13 +380,24 @@ export default function AiForm({ type, tool, bare }) {
 
           {form.mode === 'diagnose' && <>
             <div style={S.field}>
-              <label style={S.flabel}>배민 옵션 화면 캡처 ★ 추천 <span style={{color:'#607570',fontWeight:400}}>(최대 6장 · 긴 캡처는 자동 분할)</span></label>
+              <label style={S.flabel}>배민 옵션 화면 캡처 <span style={{color:'#f0b942',fontWeight:700}}>★ 추천</span></label>
               <input id='diagImgInput' type='file' accept='image/*' multiple style={{ display:'none' }}
                 onChange={e => { addImages(e.target.files); e.target.value=''; }} />
-              <button style={ii.pickBtn} className='gcopy' onClick={() => document.getElementById('diagImgInput').click()} disabled={imgBusy}>
-                📷 캡처 업로드
-              </button>
-              {imgBusy && <span style={ii.busy}> 이미지 처리 중…</span>}
+              <div
+                style={{ ...ii.drop, ...(dragOver ? ii.dropOver : {}) }}
+                onClick={() => document.getElementById('diagImgInput').click()}
+                onDragOver={e => { e.preventDefault(); if (!dragOver) setDragOver(true); }}
+                onDragLeave={e => { e.preventDefault(); setDragOver(false); }}
+                onDrop={e => {
+                  e.preventDefault(); setDragOver(false);
+                  const imgs = Array.from(e.dataTransfer.files || []).filter(fl => fl.type.startsWith('image/'));
+                  if (imgs.length) addImages(imgs);
+                }}
+              >
+                <div style={ii.dropIcon}>{imgBusy ? '⏳' : '📷'}</div>
+                <div style={ii.dropMain}>{imgBusy ? '이미지 처리 중…' : '캡처를 여기로 끌어다 놓거나 클릭해서 업로드'}</div>
+                <div style={ii.dropSub}>배민 옵션 화면 캡처 · 최대 6장 · 긴 캡처는 자동 분할</div>
+              </div>
               {images.length > 0 && (
                 <div style={ii.thumbRow}>
                   {images.map((im, i) => (
@@ -634,8 +646,11 @@ const vt = {
 
 // 캡처 업로드 스타일
 const ii = {
-  pickBtn: { background:'rgba(232,168,56,.1)', border:'1px dashed rgba(232,168,56,.45)', color:'#f0b942', fontSize:'12.5px', fontWeight:700, padding:'9px 16px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
-  busy: { fontSize:'11.5px', color:'#f0b942' },
+  drop: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'5px', textAlign:'center', padding:'22px 16px', background:'rgba(232,168,56,.05)', border:'1.5px dashed rgba(232,168,56,.4)', borderRadius:'11px', cursor:'pointer', transition:'all .15s' },
+  dropOver: { background:'rgba(232,168,56,.14)', borderColor:'rgba(232,168,56,.75)' },
+  dropIcon: { fontSize:'24px' },
+  dropMain: { fontSize:'13px', fontWeight:700, color:'#e8ede8' },
+  dropSub: { fontSize:'11px', color:'#9a8f78' },
   thumbRow: { display:'flex', gap:'8px', flexWrap:'wrap', marginTop:'10px' },
   thumb: { position:'relative', width:'64px', height:'96px', borderRadius:'8px', overflow:'hidden', border:'1px solid #34302a', background:'#0d0b09' },
   thumbImg: { width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' },
