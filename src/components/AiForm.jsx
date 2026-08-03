@@ -230,6 +230,18 @@ export default function AiForm({ type, tool, bare }) {
   const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
   const isMenuoption = type === 'menuoption';
 
+  // 생성 버튼 라벨 — 도구·모드 맥락 반영
+  const ctaLabel = (() => {
+    if (type === 'menuoption') {
+      if (form.mode === 'diagnose') return '🔍 옵션 진단하기';
+      if (form.mode === 'board')    return '🧩 메뉴판 설계하기';
+      return '🧩 옵션 설계하기';
+    }
+    if (IMPROVABLE.has(type) && form.workMode === 'improve') return '✏️ 문구 개선하기';
+    return '✨ 문구 생성하기';
+  })();
+  const ctaBusy = (type === 'menuoption' && form.mode === 'diagnose') ? '진단 중...' : '생성 중...';
+
   return (
     <div style={s.page}>
       {!bare && (
@@ -441,7 +453,7 @@ export default function AiForm({ type, tool, bare }) {
         </>}
 
         <button style={{ ...S.genBtn, opacity: loading ? 0.6 : 1 }} onClick={generate} disabled={loading}>
-          {loading ? '생성 중...' : '✨ 문구 생성하기'}
+          {loading ? ctaBusy : ctaLabel}
         </button>
 
         {variants && (
