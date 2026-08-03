@@ -429,6 +429,7 @@ export default function AiForm({ type, tool, bare }) {
                 <div style={ii.dropIcon}>{imgBusy ? '⏳' : '📷'}</div>
                 <div style={ii.dropMain}>{imgBusy ? '이미지 처리 중…' : '캡처 후 Ctrl+V 로 붙여넣기 · 끌어다 놓기 · 클릭 업로드'}</div>
                 <div style={ii.dropSub}>배민 옵션 화면 캡처 · 최대 6장 · 긴 캡처는 자동 분할</div>
+                <div style={ii.dropWarn}>필수/선택·최소·최대 수는 캡처에 잘 안 나옵니다 → 아래 텍스트로 보완하면 진단이 정확해집니다</div>
               </div>
               {images.length > 0 && (
                 <div style={ii.thumbRow}>
@@ -689,6 +690,7 @@ const ii = {
   dropMain: { fontSize:'13px', fontWeight:700, color:'#e8ede8' },
   dropSub: { fontSize:'11px', color:'#9a8f78' },
   baseHint: { fontSize:'11.5px', color:'#c9b98a', background:'rgba(232,168,56,.06)', border:'1px solid rgba(232,168,56,.18)', borderRadius:'8px', padding:'8px 11px', lineHeight:1.55 },
+  dropWarn: { fontSize:'10.5px', color:'#c9976a', marginTop:'4px', lineHeight:1.5 },
   thumbRow: { display:'flex', gap:'8px', flexWrap:'wrap', marginTop:'10px' },
   thumb: { position:'relative', width:'64px', height:'96px', borderRadius:'8px', overflow:'hidden', border:'1px solid #34302a', background:'#0d0b09' },
   thumbImg: { width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' },
