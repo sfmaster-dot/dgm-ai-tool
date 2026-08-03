@@ -225,6 +225,26 @@ export default function AiForm({ type, tool, bare }) {
     setImgBusy(false);
   }
 
+  // 진단 모드: 클립보드 붙여넣기(Ctrl+V)로 캡처 바로 업로드
+  const isDiag = type === 'menuoption' && form.mode === 'diagnose';
+  useEffect(() => {
+    if (!isDiag) return;
+    const onPaste = (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      const files = [];
+      for (const it of items) {
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          const f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length) { e.preventDefault(); addImages(files); }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isDiag, images.length]);
+
   const showPreset = ['intro','notice','menuname','menudesc'].includes(type) && form.workMode !== 'improve';
   const flashStyle = { background: flash ? 'rgba(232,168,56,.18)' : '#0d0f10', transition: 'background .4s' };
   const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
@@ -407,7 +427,7 @@ export default function AiForm({ type, tool, bare }) {
                 }}
               >
                 <div style={ii.dropIcon}>{imgBusy ? '⏳' : '📷'}</div>
-                <div style={ii.dropMain}>{imgBusy ? '이미지 처리 중…' : '캡처를 여기로 끌어다 놓거나 클릭해서 업로드'}</div>
+                <div style={ii.dropMain}>{imgBusy ? '이미지 처리 중…' : '캡처 후 Ctrl+V 로 붙여넣기 · 끌어다 놓기 · 클릭 업로드'}</div>
                 <div style={ii.dropSub}>배민 옵션 화면 캡처 · 최대 6장 · 긴 캡처는 자동 분할</div>
               </div>
               {images.length > 0 && (
