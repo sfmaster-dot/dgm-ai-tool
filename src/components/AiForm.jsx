@@ -421,6 +421,11 @@ export default function AiForm({ type, tool, bare }) {
                 </div>
               )}
             </div>
+            <div style={ii.baseHint}>💡 이 옵션이 붙는 <b>기준 메뉴</b>를 알려주시면, 추가금을 메뉴가 대비 비율로 정확히 진단합니다. (캡처에 보이면 생략 가능)</div>
+            <div style={S.row}>
+              <Field label="기준 메뉴명 (선택)" placeholder="예: 불향차돌떡볶이" value={form.baseMenuName} onChange={v=>set('baseMenuName',v)} flash={flashStyle} />
+              <Field label="기준 메뉴 기본가격 (선택)" placeholder="예: 8,000원" value={form.baseMenuPrice} onChange={v=>set('baseMenuPrice',v)} flash={flashStyle} />
+            </div>
             <Field
               label="옵션 구성 텍스트 (캡처 없이 텍스트만도 가능)"
               placeholder={`배민 셀프서비스(사장님광장) 옵션 화면을 그대로 옮겨 적으세요. 형식 자유. 예:
@@ -663,6 +668,7 @@ const ii = {
   dropIcon: { fontSize:'24px' },
   dropMain: { fontSize:'13px', fontWeight:700, color:'#e8ede8' },
   dropSub: { fontSize:'11px', color:'#9a8f78' },
+  baseHint: { fontSize:'11.5px', color:'#c9b98a', background:'rgba(232,168,56,.06)', border:'1px solid rgba(232,168,56,.18)', borderRadius:'8px', padding:'8px 11px', lineHeight:1.55 },
   thumbRow: { display:'flex', gap:'8px', flexWrap:'wrap', marginTop:'10px' },
   thumb: { position:'relative', width:'64px', height:'96px', borderRadius:'8px', overflow:'hidden', border:'1px solid #34302a', background:'#0d0b09' },
   thumbImg: { width:'100%', height:'100%', objectFit:'cover', objectPosition:'top', display:'block' },

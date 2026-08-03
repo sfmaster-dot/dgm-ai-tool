@@ -882,6 +882,12 @@ const MENUOPTION_DIAGNOSE_STATIC = `당신은 한국 배달앱(배민·쿠팡이
 - 분할된 캡처는 같은 화면의 연속으로 보고 이어서 판독한다. 분할 경계에 중복된 행은 한 번만 센다.
 - 흐릿하거나 잘린 값은 추정하지 말고 "판독 불확실"로 표시하고, 해당 항목은 진단에서 제외했음을 밝힌다.
 - 텍스트와 이미지가 함께 오면 텍스트를 보충 설명으로 함께 반영한다.
+- 캡처에 이 옵션이 붙는 메뉴명·기본가격이 보이면 함께 판독한다. 별도 입력값이 있으면 그것을 우선한다.
+
+[기준 메뉴 대비 평가 — 중요]
+- 옵션 추가금은 반드시 기본 메뉴 가격 대비 비율로 평가한다. (예: 3,900원 추가는 8,000원 메뉴엔 +49%로 강한 레버, 25,000원 메뉴엔 +16%로 약한 레버)
+- 기본 메뉴 가격을 모르면(입력·캡처 어디에도 없으면) 추정하지 말고, 그 항목의 비율 평가는 "기준 메뉴 가격 미상"으로 표시하고 절대 금액 기준으로만 언급한다.
+- 여러 메뉴에 공통으로 붙는 옵션이면, 참고 메뉴판의 대표 가격대를 기준으로 폭넓게 본다.
 
 ═══════════════════════════════════════════
 [진단 프레임 — 6대 함정]
@@ -923,7 +929,7 @@ function menuoptionMode(storeInfo) {
 function menuoptionUserBlock(storeInfo) {
   const mode = menuoptionMode(storeInfo);
   if (mode === 'board') return `[입력 정보]\n메뉴판 전체:\n${storeInfo.menuBoard}\n\n업종/매장 분위기: ${storeInfo.atmosphere || '한식'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 작업을 시작하라.`;
-  if (mode === 'diagnose') return `[입력 정보]\n첨부 캡처: ${Array.isArray(storeInfo.images) ? storeInfo.images.length : 0}장\n현재 등록된 옵션 구성(텍스트):\n${storeInfo.currentOptions || '(텍스트 없음 — 첨부된 캡처 이미지를 판독할 것)'}\n\n메뉴판(참고): ${storeInfo.menuBoard || '미제공'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 진단을 시작하라.`;
+  if (mode === 'diagnose') return `[입력 정보]\n첨부 캡처: ${Array.isArray(storeInfo.images) ? storeInfo.images.length : 0}장\n기준 메뉴: ${storeInfo.baseMenuName || '(미입력 — 캡처에서 판독하거나 미상 처리)'}\n기준 메뉴 기본가격: ${storeInfo.baseMenuPrice || '(미입력)'}\n현재 등록된 옵션 구성(텍스트):\n${storeInfo.currentOptions || '(텍스트 없음 — 첨부된 캡처 이미지를 판독할 것)'}\n\n메뉴판(참고): ${storeInfo.menuBoard || '미제공'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 진단을 시작하라.`;
   return `[입력 정보]\n메뉴명: ${storeInfo.menuName}\n기본 가격: ${storeInfo.basePrice}\n기본 인분: ${storeInfo.basePortion || '1~2인분'}\n토핑 후보: ${storeInfo.toppings || '없음'}\n사이드 후보: ${storeInfo.sides || '없음'}\n음료 후보: ${storeInfo.drinks || '없음'}\n객단가 목표: ${storeInfo.targetAOV || '+5,000원'}\n운영 시기: ${storeInfo.stage || '안정기'}\n\n위 [입력 정보]를 기준으로 작업을 시작하라.`;
 }
 

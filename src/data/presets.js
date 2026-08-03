@@ -159,6 +159,7 @@ export const MENUOPTION_GUIDES = [
 export const DEFAULT_FORM = {
   currentOptions: '',
   workMode: 'new', currentCopy: '', emphasis: '',
+  baseMenuName: '', baseMenuPrice: '',
   category:'', mainMenu:'', feature:'', style:'',
   storeName:'', story:'', event:'', featuredMenu:'', extraNotice:'',
   firstLine:'',
