@@ -30,8 +30,8 @@ function allGroupsText(json) {
 }
 
 // ── AI 문구 메이커: 다안·개선·다듬기 ──
-const IMPROVABLE = new Set(['intro', 'notice', 'menudesc', 'orderguide']);
-const CHIP_TYPES = IMPROVABLE;
+const IMPROVABLE = new Set(['intro', 'notice', 'menudesc', 'orderguide', 'menuname']);
+const CHIP_TYPES = new Set(['intro', 'notice', 'menudesc', 'orderguide']); // 메뉴명은 리스트라 문장 다듬기 제외
 const CHIPS = [
   { label: '더 짧게',       instr: '전체 길이를 30% 이상 줄여 더 짧고 임팩트 있게.' },
   { label: '더 정감있게',   instr: '말투를 더 따뜻하고 정감 있게.' },
@@ -289,7 +289,7 @@ export default function AiForm({ type, tool, bare }) {
           </div>
         )}
 
-        {IMPROVABLE.has(type) && form.workMode === 'improve' && <>
+        {type !== 'menuname' && IMPROVABLE.has(type) && form.workMode === 'improve' && <>
           <Field
             label="현재 문구 *"
             placeholder={`지금 배민에 등록돼 있는 문구를 그대로 붙여넣으세요.
@@ -300,6 +300,11 @@ export default function AiForm({ type, tool, bare }) {
             flash={flashStyle}
           />
           <Field label="강조하고 싶은 점 (선택)" placeholder="예: 국내산 재료를 더 부각, 신메뉴 언급 추가" value={form.emphasis} onChange={v=>set('emphasis',v)} flash={flashStyle} />
+        </>}
+
+        {type === 'menuname' && form.workMode === 'improve' && <>
+          <Field label="현재 메뉴명 *" placeholder="예: 제육볶음" value={form.currentCopy} onChange={v=>set('currentCopy',v)} flash={flashStyle} />
+          <Field label="강조하고 싶은 점 (선택)" placeholder="예: 국내산 돼지고기, 직화 조리 강조" value={form.emphasis} onChange={v=>set('emphasis',v)} flash={flashStyle} />
         </>}
 
         {showPreset && (
@@ -337,7 +342,7 @@ export default function AiForm({ type, tool, bare }) {
           <Field label="추가 안내사항" placeholder="예: 매주 월요일 정기휴무, 배달 지연 양해 부탁" value={form.extraNotice} onChange={v=>set('extraNotice',v)} textarea flash={flashStyle} />
         </>}
 
-        {type==='menuname' && <>
+        {type==='menuname' && form.workMode !== 'improve' && <>
           <div style={S.row}>
             <Field label="현재 메뉴명 *" placeholder="예: 제육볶음" value={form.currentName} onChange={v=>set('currentName',v)} flash={flashStyle} />
             <Field label="업종/음식 종류 *" placeholder="예: 한식, 볶음류" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
