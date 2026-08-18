@@ -14,11 +14,54 @@ function splitStructured(raw) {
   try {
     const json = JSON.parse(t.slice(a, b + 1));
     if (!json || !Array.isArray(json.optionGroups)) return { text: raw, json: null };
-    return { text, json };
+    return { text, json: dedupeGroups(json) };
   } catch { return { text: raw, json: null }; }
 }
 
 const won = (n) => (typeof n === 'number' ? n.toLocaleString('ko-KR') : (n ?? ''));
+
+// ── 품목 배타 배분 — 같은 품목이 여러 그룹에 겹치면 한 곳만 남긴다 ──
+// 우선순위 0: 할인이 걸린 일반 그룹(객단가 레버) / 1: 리뷰 이벤트 / 2: 나머지
+// 같은 순위면 앞 그룹이 가져간다. 비게 된 그룹은 통째로 제거한다.
+function itemKey(name) {
+  return String(name || '')
+    .replace(/\[[^\]]*\]/g, '')   // [리뷰 약속] 등 라벨 제거
+    .replace(/\([^)]*\)/g, '')     // (단품 4,000원) 등 괄호 제거
+    .replace(/\s+/g, '')
+    .replace(/추가$/, '');
+}
+function sameItem(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const [s1, s2] = a.length <= b.length ? [a, b] : [b, a];
+  return s1.length >= 2 && s2.includes(s1);
+}
+function groupRank(g) {
+  if (/리뷰/.test(g.name || '')) return 1;
+  return (g.options || []).some(o => typeof o?.discount === 'number' && o.discount > 0) ? 0 : 2;
+}
+function dedupeGroups(json) {
+  if (!json || !Array.isArray(json.optionGroups)) return json;
+  const order = json.optionGroups
+    .map((g, i) => ({ g, i, r: groupRank(g) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i);
+  const taken = [];
+  const kept = new Map();
+  for (const { g, i } of order) {
+    const keep = (g.options || []).filter(o => {
+      const k = itemKey(o.name);
+      if (!k) return true;
+      if (taken.some(t => sameItem(t, k))) return false;
+      taken.push(k);
+      return true;
+    });
+    if (keep.length) kept.set(i, { ...g, options: keep });
+  }
+  return {
+    ...json,
+    optionGroups: json.optionGroups.map((_, i) => kept.get(i)).filter(Boolean),
+  };
+}
 
 // 할인 등록 대상인지 — 등록가·할인액이 모두 있고 실제로 깎인 경우만
 function hasDisc(o) {
