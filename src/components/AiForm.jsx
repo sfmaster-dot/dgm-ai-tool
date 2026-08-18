@@ -36,24 +36,17 @@ function sameItem(a, b) {
   const [s1, s2] = a.length <= b.length ? [a, b] : [b, a];
   return s1.length >= 2 && s2.includes(s1);
 }
+// 리뷰 이벤트가 최우선 — 리뷰는 매출이고, 실제 운영에서 리뷰 품목이 먼저 정해진다
 function groupRank(g) {
-  if (/리뷰/.test(g.name || '')) return 1;
-  return (g.options || []).some(o => typeof o?.discount === 'number' && o.discount > 0) ? 0 : 2;
+  if (/리뷰/.test(g.name || '')) return 0;
+  return (g.options || []).some(o => typeof o?.discount === 'number' && o.discount > 0) ? 1 : 2;
 }
 function dedupeGroups(json) {
   if (!json || !Array.isArray(json.optionGroups)) return json;
   const groups = json.optionGroups;
 
-  // 리뷰 이벤트 그룹은 최소 1개를 확보한다.
-  // 사이드 후보가 적으면 할인 그룹이 전부 가져가 리뷰 그룹이 사라지기 때문.
-  // 할인 그룹이 앞선(값이 큰) 품목을 갖도록, 리뷰 그룹의 "마지막" 옵션을 예약한다.
+  // 리뷰 그룹은 최대 2개까지만 가져간다. 나머지는 할인 그룹 몫으로 남긴다.
   const reviewIdx = groups.findIndex(g => /리뷰/.test(g.name || ''));
-  const reserved = [];
-  if (reviewIdx >= 0) {
-    const opts = groups[reviewIdx].options || [];
-    const last = opts[opts.length - 1];
-    if (last) reserved.push(itemKey(last.name));
-  }
 
   const order = groups
     .map((g, i) => ({ g, i, r: groupRank(g) }))
@@ -62,14 +55,14 @@ function dedupeGroups(json) {
   const taken = [];
   const kept = new Map();
   for (const { g, i } of order) {
-    const isReview = i === reviewIdx;
+    const cap = i === reviewIdx ? 2 : Infinity;
+    let n = 0;
     const keep = (g.options || []).filter(o => {
       const k = itemKey(o.name);
       if (!k) return true;
-      // 예약된 품목은 리뷰 그룹만 가져갈 수 있다
-      if (!isReview && reserved.some(t => sameItem(t, k))) return false;
+      if (n >= cap) return false;
       if (taken.some(t => sameItem(t, k))) return false;
-      taken.push(k);
+      taken.push(k); n++;
       return true;
     });
     if (keep.length) kept.set(i, { ...g, options: keep });
@@ -617,6 +610,21 @@ export default function AiForm({ type, tool, bare }) {
                       )}
                     </div>
                   ))}
+                  {/리뷰/.test(g.name || '') && (g.options || []).some(hasDisc) && (
+                    <div style={st.gcalc}>
+                      {(g.options || []).filter(hasDisc).map((o, k) => {
+                        const net = Math.round(o.price * 0.8812);
+                        return (
+                          <div key={k}>
+                            · 수수료 떼면 <b>{won(net)}원</b> 남습니다. 원가+포장재가 <b>{won(net - 500)}원</b> 이하면 500원 이상 이익입니다
+                          </div>
+                        );
+                      })}
+                      <div style={{ marginTop: '5px', color: '#8a8070' }}>
+                        전환가 = (원가 + 500원) ÷ 0.88 · 위 금액은 원가를 판매가의 30%로 잡은 기본값입니다. 실제 원가로 다시 계산하십시오
+                      </div>
+                    </div>
+                  )}
                 </>}
               </div>
             ))}
@@ -734,6 +742,7 @@ const st = {
   opriceCol: { display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'1px', flexShrink:0, minWidth:'92px' },
   olist: { fontSize:'11px', color:'#8a8070', textDecoration:'line-through', lineHeight:1.3 },
   odisc: { fontSize:'10px', color:'#e07a5a', lineHeight:1.3, whiteSpace:'nowrap' },
+  gcalc: { marginTop:'9px', padding:'8px 10px', background:'rgba(120,180,140,.07)', border:'1px solid rgba(120,180,140,.22)', borderRadius:'7px', fontSize:'11px', color:'#a8c4b0', lineHeight:1.6 },
   gdiscHint: { marginTop:'2px', padding:'8px 10px', background:'rgba(232,168,56,.07)', border:'1px solid rgba(232,168,56,.22)', borderRadius:'7px', fontSize:'11px', color:'#c9b98a', lineHeight:1.55 },
   copyAll: { width:'100%', background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.35)', color:'#f0b942', fontSize:'13px', fontWeight:700, padding:'10px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
   sim: { marginTop:'6px', background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
