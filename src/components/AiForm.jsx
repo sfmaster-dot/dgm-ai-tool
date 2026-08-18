@@ -42,15 +42,32 @@ function groupRank(g) {
 }
 function dedupeGroups(json) {
   if (!json || !Array.isArray(json.optionGroups)) return json;
-  const order = json.optionGroups
+  const groups = json.optionGroups;
+
+  // 리뷰 이벤트 그룹은 최소 1개를 확보한다.
+  // 사이드 후보가 적으면 할인 그룹이 전부 가져가 리뷰 그룹이 사라지기 때문.
+  // 할인 그룹이 앞선(값이 큰) 품목을 갖도록, 리뷰 그룹의 "마지막" 옵션을 예약한다.
+  const reviewIdx = groups.findIndex(g => /리뷰/.test(g.name || ''));
+  const reserved = [];
+  if (reviewIdx >= 0) {
+    const opts = groups[reviewIdx].options || [];
+    const last = opts[opts.length - 1];
+    if (last) reserved.push(itemKey(last.name));
+  }
+
+  const order = groups
     .map((g, i) => ({ g, i, r: groupRank(g) }))
     .sort((a, b) => a.r - b.r || a.i - b.i);
+
   const taken = [];
   const kept = new Map();
   for (const { g, i } of order) {
+    const isReview = i === reviewIdx;
     const keep = (g.options || []).filter(o => {
       const k = itemKey(o.name);
       if (!k) return true;
+      // 예약된 품목은 리뷰 그룹만 가져갈 수 있다
+      if (!isReview && reserved.some(t => sameItem(t, k))) return false;
       if (taken.some(t => sameItem(t, k))) return false;
       taken.push(k);
       return true;
@@ -59,7 +76,7 @@ function dedupeGroups(json) {
   }
   return {
     ...json,
-    optionGroups: json.optionGroups.map((_, i) => kept.get(i)).filter(Boolean),
+    optionGroups: groups.map((_, i) => kept.get(i)).filter(Boolean),
   };
 }
 
