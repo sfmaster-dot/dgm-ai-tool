@@ -165,7 +165,7 @@ export const DEFAULT_FORM = {
   firstLine:'',
   currentName:'', ingredient:'',
   menuName:'', taste:'', compose:'',
-  mode:'single', menuBoard:'', atmosphere:'',
+  mode:'design', menuBoard:'', optionCandidates:'', atmosphere:'',
   basePrice:'', basePortion:'1~2인분', toppings:'', sides:'', drinks:'', targetAOV:'+5,000원', stage:'안정기',
   review:'', rating:'5',
 };

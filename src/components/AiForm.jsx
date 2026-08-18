@@ -121,9 +121,10 @@ export default function AiForm({ type, tool, bare }) {
   const [images, setImages]   = useState([]);         // 진단 캡처 (base64 조각)
   const [imgBusy, setImgBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [openG, setOpenG]     = useState({});         // 규격 카드 접기 (그룹 7개↑)
 
   useEffect(() => { sessionForm = form; }, [form]);
-  useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); setImages([]); }, [type]);
+  useEffect(() => { setResult(''); setStructured(null); setVariants(null); setCopiedG(null); setCopied(false); setImages([]); setOpenG({}); }, [type]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied]   = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -152,7 +153,7 @@ export default function AiForm({ type, tool, bare }) {
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
-      menuoption: form.mode === 'board' ? ['menuBoard'] : form.mode === 'diagnose' ? [] : ['menuName','basePrice'],
+      menuoption: form.mode === 'diagnose' ? [] : ['menuBoard'],
       reply:      ['storeName','review','rating'],
     }[type] || []);
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
@@ -179,7 +180,7 @@ export default function AiForm({ type, tool, bare }) {
       const raw = data.result || data.error || '오류가 발생했습니다.';
       if (type === 'menuoption') {
         const { text, json } = splitStructured(raw);
-        setResult(text); setStructured(json);
+        setResult(text); setStructured(json); setOpenG({});
       } else if (IMPROVABLE.has(type) && form.workMode !== 'improve') {
         const v = parseVariants(raw);
         if (v) { setVariants(v); setResult(''); }
@@ -254,13 +255,13 @@ export default function AiForm({ type, tool, bare }) {
   const ctaLabel = (() => {
     if (type === 'menuoption') {
       if (form.mode === 'diagnose') return '🔍 옵션 진단하기';
-      if (form.mode === 'board')    return '🧩 메뉴판 설계하기';
       return '🧩 옵션 설계하기';
     }
     if (IMPROVABLE.has(type) && form.workMode === 'improve') return '✏️ 문구 개선하기';
     return '✨ 문구 생성하기';
   })();
   const ctaBusy = (type === 'menuoption' && form.mode === 'diagnose') ? '진단 중...' : '생성 중...';
+  const manyGroups = !!structured && (structured.optionGroups || []).length > 6;
 
   return (
     <div style={s.page}>
@@ -369,29 +370,13 @@ export default function AiForm({ type, tool, bare }) {
 
         {type==='menuoption' && <>
           <div style={S.modeTabs}>
-            <button style={{...S.modeTab, ...(form.mode !== 'board' && form.mode !== 'diagnose' ? S.modeTabActive : {})}} onClick={() => set('mode', 'single')} className='modeTab'>단일 메뉴</button>
-            <button style={{...S.modeTab, ...(form.mode === 'board' ? S.modeTabActive : {})}} onClick={() => set('mode', 'board')} className='modeTab'>📋 메뉴판 전체 ★</button>
+            <button style={{...S.modeTab, ...(form.mode !== 'diagnose' ? S.modeTabActive : {})}} onClick={() => set('mode', 'design')} className='modeTab'>🧩 옵션 설계</button>
             <button style={{...S.modeTab, ...(form.mode === 'diagnose' ? S.modeTabActive : {})}} onClick={() => set('mode', 'diagnose')} className='modeTab'>🔍 옵션 진단</button>
           </div>
 
-          {form.mode !== 'board' && form.mode !== 'diagnose' && <>
-            <div style={S.row}>
-              <Field label="메뉴명 *" placeholder="예: 불향차돌떡볶이" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
-              <Field label="기본 가격 *" placeholder="예: 18,000원 또는 18000" value={form.basePrice} onChange={v=>set('basePrice',v)} flash={flashStyle} />
-            </div>
-            <Field label="기본 인분" placeholder="예: 1~2인분, 2인분" value={form.basePortion} onChange={v=>set('basePortion',v)} flash={flashStyle} />
-            <Field label="토핑 후보 (쉼표로 구분)" placeholder="예: 차돌박이, 모짜렐라치즈, 통새우 5마리" value={form.toppings} onChange={v=>set('toppings',v)} textarea flash={flashStyle} />
-            <Field label="사이드 후보 (쉼표로 구분)" placeholder="예: 볶음밥, 군만두, 김말이튀김, 라면사리" value={form.sides} onChange={v=>set('sides',v)} flash={flashStyle} />
-            <Field label="음료 후보 (쉼표로 구분)" placeholder="예: 콜라, 사이다, 청포도에이드" value={form.drinks} onChange={v=>set('drinks',v)} flash={flashStyle} />
-            <div style={S.row}>
-              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
-              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
-            </div>
-          </>}
-
-          {form.mode === 'board' && <>
+          {form.mode !== 'diagnose' && <>
             <Field
-              label="메뉴판 전체 *"
+              label="메뉴판 * — 메뉴 1개만 넣어도 됩니다"
               placeholder={`메뉴판을 그대로 붙여넣으세요. 예:
 
 1. 불향차돌떡볶이 18,000원 (2인분)
@@ -402,12 +387,13 @@ export default function AiForm({ type, tool, bare }) {
 6. 콜라 2,000원
 7. 청포도에이드 4,000원
 
-* 메뉴 카테고리·옵션 트리·리뷰이벤트·객단가 시뮬레이션까지 한꺼번에 분석`}
+* 메뉴 1개면 그 메뉴 심화 설계, 여러 개면 옵션그룹 통합 설계`}
               value={form.menuBoard}
               onChange={v=>set('menuBoard',v)}
               textarea
               flash={flashStyle}
             />
+            <Field label="옵션 후보 (선택) — 토핑·사이드·음료, 가격 포함" placeholder="예: 치즈추가 2000, 낙지추가 8000, 라면사리 2000, 콜라 2000" value={form.optionCandidates} onChange={v=>set('optionCandidates',v)} textarea flash={flashStyle} />
             <Field label="업종/매장 분위기" placeholder="예: 분식·야식 / 캐주얼 / 가족 외식형" value={form.atmosphere} onChange={v=>set('atmosphere',v)} flash={flashStyle} />
             <div style={S.row}>
               <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
@@ -536,24 +522,28 @@ export default function AiForm({ type, tool, bare }) {
         {structured && (
           <div style={st.wrap}>
             <div style={st.secTitle}>📋 배민 입력 규격 — 그대로 옮겨 적으세요</div>
+            {manyGroups && <div style={st.foldHint}>그룹이 많아 접혀 있습니다 · 제목을 누르면 펼쳐집니다</div>}
             {(structured.optionGroups || []).map((g, i) => (
               <div key={i} style={st.gcard}>
-                <div style={st.ghead}>
+                <div style={{ ...st.ghead, cursor: manyGroups ? 'pointer' : 'default' }} onClick={() => manyGroups && setOpenG(o => ({ ...o, [i]: !o[i] }))}>
+                  {manyGroups && <span style={st.gchev}>{openG[i] ? '▾' : '▸'}</span>}
                   <span style={{ ...st.badge, ...(g.required ? st.badgeReq : st.badgeOpt) }}>{g.required ? '필수' : '선택'}</span>
                   <span style={st.gname}>{g.name}</span>
                   <span style={st.gminmax}>최소 {g.min ?? 0} ~ 최대 {g.max ?? 1}</span>
-                  <button style={st.gcopy} className='gcopy' onClick={() => { navigator.clipboard.writeText(groupToText(g)); setCopiedG(i); setTimeout(() => setCopiedG(null), 1600); }}>
+                  <button style={st.gcopy} className='gcopy' onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(groupToText(g)); setCopiedG(i); setTimeout(() => setCopiedG(null), 1600); }}>
                     {copiedG === i ? '✓ 복사됨' : '복사'}
                   </button>
                 </div>
-                {g.purpose && <div style={st.gpurpose}>{g.purpose}</div>}
-                {(g.options || []).map((o, j) => (
-                  <div key={j} style={st.orow}>
-                    <span style={st.oname}>{o.name}</span>
-                    {o.note && <span style={st.onote}>{o.note}</span>}
-                    <span style={st.oprice}>+{won(o.price)}원</span>
-                  </div>
-                ))}
+                {(!manyGroups || openG[i]) && <>
+                  {g.purpose && <div style={st.gpurpose}>{g.purpose}</div>}
+                  {(g.options || []).map((o, j) => (
+                    <div key={j} style={st.orow}>
+                      <span style={st.oname}>{o.name}</span>
+                      {o.note && <span style={st.onote}>{o.note}</span>}
+                      <span style={st.oprice}>+{won(o.price)}원</span>
+                    </div>
+                  ))}
+                </>}
               </div>
             ))}
             <button style={st.copyAll} className='gcopy' onClick={() => { navigator.clipboard.writeText(allGroupsText(structured)); setCopiedG('all'); setTimeout(() => setCopiedG(null), 1600); }}>
@@ -645,6 +635,8 @@ const s = {
 const st = {
   wrap: { marginTop:'16px', display:'flex', flexDirection:'column', gap:'10px' },
   secTitle: { fontSize:'13.5px', fontWeight:800, color:'#f0b942', margin:'6px 0 2px' },
+  foldHint: { fontSize:'11px', color:'#9a8f78', marginTop:'-4px' },
+  gchev: { fontSize:'12px', color:'#f0b942', flexShrink:0, width:'12px' },
   gcard: { background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
   ghead: { display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' },
   badge: { fontSize:'10.5px', fontWeight:800, padding:'3px 8px', borderRadius:'999px', flexShrink:0 },
