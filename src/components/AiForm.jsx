@@ -557,15 +557,16 @@ export default function AiForm({ type, tool, bare }) {
                       )}
                     </div>
                   ))}
-                  {(g.options || []).some(hasDisc) && (
-                    <div style={st.gdiscHint}>
-                      💡 옵션 칸에는 <b>등록가</b>를 넣고, [배민셀프서비스 → 메뉴별 할인 관리 → 옵션할인]에서 할인액을 겁니다.
-                      그래야 정가에 취소선이 그어집니다. 가격을 방금 수정했다면 <b>48시간</b> 뒤부터 등록됩니다.
-                    </div>
-                  )}
                 </>}
               </div>
             ))}
+            {(structured.optionGroups || []).some(g => (g.options || []).some(hasDisc)) && (
+              <div style={st.gdiscHint}>
+                💡 <b>취소선이 있는 옵션</b>은 옵션 칸에 <b>등록가</b>를 넣고, [배민셀프서비스 → 메뉴별 할인 관리 → 옵션할인]에서
+                할인액을 따로 겁니다. 할인가를 옵션 칸에 그냥 낮춰 넣으면 취소선이 안 붙어 효과가 사라집니다.
+                가격을 방금 수정했다면 <b>48시간</b> 뒤부터 할인 등록이 됩니다.
+              </div>
+            )}
             <button style={st.copyAll} className='gcopy' onClick={() => { navigator.clipboard.writeText(allGroupsText(structured)); setCopiedG('all'); setTimeout(() => setCopiedG(null), 1600); }}>
               {copiedG === 'all' ? '✓ 전체 구성 복사됨' : '전체 구성 복사'}
             </button>
@@ -673,7 +674,7 @@ const st = {
   opriceCol: { display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'1px', flexShrink:0, minWidth:'92px' },
   olist: { fontSize:'11px', color:'#8a8070', textDecoration:'line-through', lineHeight:1.3 },
   odisc: { fontSize:'10px', color:'#e07a5a', lineHeight:1.3, whiteSpace:'nowrap' },
-  gdiscHint: { marginTop:'8px', padding:'8px 10px', background:'rgba(232,168,56,.07)', border:'1px solid rgba(232,168,56,.22)', borderRadius:'7px', fontSize:'11px', color:'#c9b98a', lineHeight:1.55 },
+  gdiscHint: { marginTop:'2px', padding:'8px 10px', background:'rgba(232,168,56,.07)', border:'1px solid rgba(232,168,56,.22)', borderRadius:'7px', fontSize:'11px', color:'#c9b98a', lineHeight:1.55 },
   copyAll: { width:'100%', background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.35)', color:'#f0b942', fontSize:'13px', fontWeight:700, padding:'10px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
   sim: { marginTop:'6px', background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
   simNote: { fontSize:'12px', color:'#9a8f78', marginBottom:'8px', lineHeight:1.55 },
