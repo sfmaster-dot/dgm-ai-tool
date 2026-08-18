@@ -20,10 +20,24 @@ function splitStructured(raw) {
 
 const won = (n) => (typeof n === 'number' ? n.toLocaleString('ko-KR') : (n ?? ''));
 
+// 할인 등록 대상인지 — 등록가·할인액이 모두 있고 실제로 깎인 경우만
+function hasDisc(o) {
+  return typeof o?.listPrice === 'number' && typeof o?.discount === 'number'
+    && o.discount > 0 && o.listPrice > o.price;
+}
+function discRate(o) {
+  return Math.round((o.discount / o.listPrice) * 100);
+}
 function groupToText(g) {
   const head = `【${g.name}】 ${g.required ? '필수' : '선택'} · 최소 ${g.min ?? 0}개 ~ 최대 ${g.max ?? 1}개`;
-  const rows = (g.options || []).map(o => `- ${o.name}  +${won(o.price)}원${o.note ? `  (${o.note})` : ''}`);
-  return [head, ...rows].join('\n');
+  const rows = (g.options || []).map(o => hasDisc(o)
+    ? `- ${o.name}  옵션가 ${won(o.listPrice)}원 등록 → ${won(o.discount)}원 할인 (${discRate(o)}%) = ${won(o.price)}원${o.note ? `  (${o.note})` : ''}`
+    : `- ${o.name}  +${won(o.price)}원${o.note ? `  (${o.note})` : ''}`);
+  const tail = (g.options || []).some(hasDisc)
+    ? ['', '※ 할인은 옵션 칸에 낮은 금액을 넣는 게 아니라, [메뉴별 할인 관리 → 옵션할인]에서 겁니다.',
+       '   가격을 방금 수정했다면 48시간 뒤부터 할인 등록이 됩니다.']
+    : [];
+  return [head, ...rows, ...tail].join('\n');
 }
 function allGroupsText(json) {
   return (json.optionGroups || []).map(groupToText).join('\n\n');
@@ -103,7 +117,6 @@ const LABELS = {
   notice:     '사장님공지 생성',
   menuname:   '메뉴명 SEO',
   menudesc:   '메뉴설명 후킹',
-  reply:      '리뷰답변 생성',
   orderguide: '주문안내 생성',
   menuoption: '메뉴 옵션 설계',
 };
@@ -154,7 +167,6 @@ export default function AiForm({ type, tool, bare }) {
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
       menuoption: form.mode === 'diagnose' ? [] : ['menuBoard'],
-      reply:      ['storeName','review','rating'],
     }[type] || []);
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
     if (type === 'menuoption' && form.mode === 'diagnose' && !form.currentOptions && images.length === 0) {
@@ -463,12 +475,6 @@ export default function AiForm({ type, tool, bare }) {
           </>}
         </>}
 
-        {type==='reply' && <>
-          <Field label="가게명 *" placeholder="예: 영일이아구찜 창원점" value={form.storeName} onChange={v=>set('storeName',v)} />
-          <Field label="고객 리뷰 *" placeholder="리뷰 본문을 붙여넣으세요" value={form.review} onChange={v=>set('review',v)} textarea />
-          <SelectField label="별점 *" value={form.rating} onChange={v=>set('rating',v)} options={['1','2','3','4','5']} />
-        </>}
-
         <button style={{ ...S.genBtn, opacity: loading ? 0.6 : 1 }} onClick={generate} disabled={loading}>
           {loading ? ctaBusy : ctaLabel}
         </button>
@@ -540,9 +546,23 @@ export default function AiForm({ type, tool, bare }) {
                     <div key={j} style={st.orow}>
                       <span style={st.oname}>{o.name}</span>
                       {o.note && <span style={st.onote}>{o.note}</span>}
-                      <span style={st.oprice}>+{won(o.price)}원</span>
+                      {hasDisc(o) ? (
+                        <span style={st.opriceCol}>
+                          <span style={st.olist}>{won(o.listPrice)}원</span>
+                          <span style={st.oprice}>+{won(o.price)}원</span>
+                          <span style={st.odisc}>{won(o.discount)}원 할인 · {discRate(o)}%</span>
+                        </span>
+                      ) : (
+                        <span style={st.oprice}>+{won(o.price)}원</span>
+                      )}
                     </div>
                   ))}
+                  {(g.options || []).some(hasDisc) && (
+                    <div style={st.gdiscHint}>
+                      💡 옵션 칸에는 <b>등록가</b>를 넣고, [배민셀프서비스 → 메뉴별 할인 관리 → 옵션할인]에서 할인액을 겁니다.
+                      그래야 정가에 취소선이 그어집니다. 가격을 방금 수정했다면 <b>48시간</b> 뒤부터 등록됩니다.
+                    </div>
+                  )}
                 </>}
               </div>
             ))}
@@ -573,7 +593,7 @@ export default function AiForm({ type, tool, bare }) {
         {isMenuoption && (
           <div style={S.guideWrap}>
             <button style={S.guideToggle} onClick={() => setGuideOpen(o => !o)} className='guideToggle'>
-              <span>📚 옵션 설계 6가지 핵심 가이드</span>
+              <span>📚 옵션 설계 7가지 핵심 가이드</span>
               <span style={{ transform: guideOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .25s', fontSize: '11px' }}>▼</span>
             </button>
             {guideOpen && (
@@ -650,6 +670,10 @@ const st = {
   oname: { fontSize:'13px', color:'#e8ede8', flex:1 },
   onote: { fontSize:'10.5px', color:'#9a8f78', background:'#1e1a14', border:'1px solid #2c281f', padding:'2px 7px', borderRadius:'999px', flexShrink:0 },
   oprice: { fontSize:'13px', fontWeight:700, color:'#f0b942', flexShrink:0, minWidth:'72px', textAlign:'right' },
+  opriceCol: { display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'1px', flexShrink:0, minWidth:'92px' },
+  olist: { fontSize:'11px', color:'#8a8070', textDecoration:'line-through', lineHeight:1.3 },
+  odisc: { fontSize:'10px', color:'#e07a5a', lineHeight:1.3, whiteSpace:'nowrap' },
+  gdiscHint: { marginTop:'8px', padding:'8px 10px', background:'rgba(232,168,56,.07)', border:'1px solid rgba(232,168,56,.22)', borderRadius:'7px', fontSize:'11px', color:'#c9b98a', lineHeight:1.55 },
   copyAll: { width:'100%', background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.35)', color:'#f0b942', fontSize:'13px', fontWeight:700, padding:'10px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
   sim: { marginTop:'6px', background:'#16130f', border:'1px solid #34302a', borderRadius:'11px', padding:'12px 14px' },
   simNote: { fontSize:'12px', color:'#9a8f78', marginBottom:'8px', lineHeight:1.55 },
