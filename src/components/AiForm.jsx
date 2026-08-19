@@ -165,6 +165,32 @@ let sessionForm = null;
 import { S } from '../data/styles';
 
 // type → 헤더 라벨. App의 도구 그리드와 동일한 표기.
+// 매장 분위기·주 고객층 — 복수 선택
+const AUDIENCE = ['가족 외식', '술안주', '1인 식사', '직장인 점심', '야식', '아이 동반'];
+
+// 칩 다중 선택 — 값은 쉼표로 이어 붙인 문자열로 보관
+function ChipField({ label, value, onChange, options }) {
+  const picked = String(value || '').split(',').map(v => v.trim()).filter(Boolean);
+  const toggle = (o) => {
+    const next = picked.includes(o) ? picked.filter(v => v !== o) : [...picked, o];
+    onChange(next.join(', '));
+  };
+  return (
+    <div style={S.field}>
+      <label style={S.flabel}>{label}</label>
+      <div style={st.chipWrap}>
+        {options.map(o => {
+          const on = picked.includes(o);
+          return (
+            <button key={o} type="button" onClick={() => toggle(o)}
+              style={{ ...st.chip, ...(on ? st.chipOn : {}) }}>{o}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const LABELS = {
   intro:      '가게소개 생성',
   notice:     '사장님공지 생성',
@@ -441,8 +467,8 @@ export default function AiForm({ type, tool, bare }) {
 
           {form.mode !== 'diagnose' && <>
             <Field
-              label="메뉴판 * — 메뉴 1개만 넣어도 됩니다"
-              placeholder={`메뉴판을 그대로 붙여넣으세요. 예:
+              label="메뉴판 * — 단품으로 파는 것을 가격과 함께"
+              placeholder={`메인·사이드·음료 전부. 단품가가 있어야 할인 설계가 됩니다. 예:
 
 1. 불향차돌떡볶이 18,000원 (2인분)
 2. 로제떡볶이 16,000원 (2인분)
@@ -452,18 +478,14 @@ export default function AiForm({ type, tool, bare }) {
 6. 콜라 2,000원
 7. 청포도에이드 4,000원
 
-* 메뉴 1개면 그 메뉴 심화 설계, 여러 개면 옵션그룹 통합 설계`}
+* 대표 메뉴 하나만 넣고 결과를 본 뒤 늘려가는 것을 권합니다`}
               value={form.menuBoard}
               onChange={v=>set('menuBoard',v)}
               textarea
               flash={flashStyle}
             />
-            <Field label="옵션 후보 (선택) — 토핑·사이드·음료, 가격 포함" placeholder="예: 치즈추가 2000, 낙지추가 8000, 라면사리 2000, 콜라 2000" value={form.optionCandidates} onChange={v=>set('optionCandidates',v)} textarea flash={flashStyle} />
-            <Field label="업종/매장 분위기" placeholder="예: 분식·야식 / 캐주얼 / 가족 외식형" value={form.atmosphere} onChange={v=>set('atmosphere',v)} flash={flashStyle} />
-            <div style={S.row}>
-              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
-              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
-            </div>
+            <Field label="옵션에만 넣을 것 — 단품으로 안 파는 것만" placeholder="토핑·사리·인분·맵기 등. 위 메뉴판에 적은 건 여기 또 적지 않아도 됩니다.&#10;예: 치즈추가 2000, 낙지추가 8000, 라면사리 2000, 곱빼기 3000, 맵기 0" value={form.optionCandidates} onChange={v=>set('optionCandidates',v)} textarea flash={flashStyle} />
+            <ChipField label="매장 분위기·주 고객층 — 해당되는 것 모두" value={form.atmosphere} onChange={v=>set('atmosphere',v)} options={AUDIENCE} />
           </>}
 
           {form.mode === 'diagnose' && <>
@@ -521,10 +543,7 @@ export default function AiForm({ type, tool, bare }) {
               flash={flashStyle}
             />
             <Field label="메뉴판 (선택)" placeholder="메뉴판도 주시면 빠진 레버를 더 정확히 짚습니다" value={form.menuBoard} onChange={v=>set('menuBoard',v)} textarea flash={flashStyle} />
-            <div style={S.row}>
-              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
-              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
-            </div>
+            <ChipField label="매장 분위기·주 고객층 — 해당되는 것 모두" value={form.atmosphere} onChange={v=>set('atmosphere',v)} options={AUDIENCE} />
           </>}
         </>}
 
@@ -702,16 +721,6 @@ function Field({ label, placeholder, value, onChange, textarea, tall, flash }) {
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
-  return (
-    <div style={S.field}>
-      <label style={S.flabel}>{label}</label>
-      <select style={S.finput} value={value} onChange={e => onChange(e.target.value)}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 const s = {
   page: { maxWidth:'640px', margin:'0 auto', padding:'22px 16px 32px' },
@@ -742,6 +751,9 @@ const st = {
   opriceCol: { display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'1px', flexShrink:0, minWidth:'92px' },
   olist: { fontSize:'11px', color:'#8a8070', textDecoration:'line-through', lineHeight:1.3 },
   odisc: { fontSize:'10px', color:'#e07a5a', lineHeight:1.3, whiteSpace:'nowrap' },
+  chipWrap: { display:'flex', flexWrap:'wrap', gap:'6px' },
+  chip: { padding:'7px 13px', borderRadius:'999px', background:'#0d0f10', border:'1px solid #2a2f30', color:'#9aada6', fontSize:'12.5px', fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },
+  chipOn: { background:'rgba(232,168,56,.15)', borderColor:'rgba(232,168,56,.55)', color:'#e8a838' },
   gcalc: { marginTop:'9px', padding:'8px 10px', background:'rgba(120,180,140,.07)', border:'1px solid rgba(120,180,140,.22)', borderRadius:'7px', fontSize:'11px', color:'#a8c4b0', lineHeight:1.6 },
   gdiscHint: { marginTop:'2px', padding:'8px 10px', background:'rgba(232,168,56,.07)', border:'1px solid rgba(232,168,56,.22)', borderRadius:'7px', fontSize:'11px', color:'#c9b98a', lineHeight:1.55 },
   copyAll: { width:'100%', background:'rgba(232,168,56,.1)', border:'1px solid rgba(232,168,56,.35)', color:'#f0b942', fontSize:'13px', fontWeight:700, padding:'10px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit', transition:'all .15s' },

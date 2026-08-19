@@ -171,7 +171,6 @@ export const DEFAULT_FORM = {
   currentName:'', ingredient:'',
   menuName:'', taste:'', compose:'',
   mode:'design', menuBoard:'', optionCandidates:'', atmosphere:'',
-  targetAOV:'+5,000원', stage:'안정기',
 };
 
 // 배열이면 랜덤 pick, 문자열이면 그대로
