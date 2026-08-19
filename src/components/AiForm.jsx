@@ -36,33 +36,33 @@ function sameItem(a, b) {
   const [s1, s2] = a.length <= b.length ? [a, b] : [b, a];
   return s1.length >= 2 && s2.includes(s1);
 }
-// 리뷰 이벤트가 최우선 — 리뷰는 매출이고, 실제 운영에서 리뷰 품목이 먼저 정해진다
+// 할인 그룹이 먼저 가져간다. 리뷰 그룹은 아래에서 배분 자체에서 빠진다.
 function groupRank(g) {
-  if (/리뷰/.test(g.name || '')) return 0;
-  return (g.options || []).some(o => typeof o?.discount === 'number' && o.discount > 0) ? 1 : 2;
+  return (g.options || []).some(o => typeof o?.discount === 'number' && o.discount > 0) ? 0 : 1;
 }
 function dedupeGroups(json) {
   if (!json || !Array.isArray(json.optionGroups)) return json;
   const groups = json.optionGroups;
 
-  // 리뷰 그룹은 최대 2개까지만 가져간다. 나머지는 할인 그룹 몫으로 남긴다.
-  const reviewIdx = groups.findIndex(g => /리뷰/.test(g.name || ''));
+  // 🚨 리뷰 이벤트는 배타 배분에서 제외한다.
+  // "리뷰 쓰면 싸게"라는 별도 조건이 붙은 자리라, 같은 품목이 다른 그룹에 정가로 있어도 충돌이 아니다.
+  // 오히려 정가가 옆에 보여야 할인폭이 체감된다. (한라봉에이드: 음료 5,500원 / 리뷰 2,400원)
+  const isReview = (g) => /리뷰/.test(g.name || '');
 
   const order = groups
     .map((g, i) => ({ g, i, r: groupRank(g) }))
+    .filter(x => !isReview(x.g))
     .sort((a, b) => a.r - b.r || a.i - b.i);
 
   const taken = [];
   const kept = new Map();
+  groups.forEach((g, i) => { if (isReview(g)) kept.set(i, g); });
   for (const { g, i } of order) {
-    const cap = i === reviewIdx ? 2 : Infinity;
-    let n = 0;
     const keep = (g.options || []).filter(o => {
       const k = itemKey(o.name);
       if (!k) return true;
-      if (n >= cap) return false;
       if (taken.some(t => sameItem(t, k))) return false;
-      taken.push(k); n++;
+      taken.push(k);
       return true;
     });
     if (keep.length) kept.set(i, { ...g, options: keep });
