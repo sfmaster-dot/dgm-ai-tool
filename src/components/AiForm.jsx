@@ -245,7 +245,7 @@ export default function AiForm({ type, tool, bare }) {
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
-      menuoption: form.mode === 'diagnose' ? [] : ['menuBoard'],
+      menuoption: form.mode === 'diagnose' ? [] : ['menuBoard','optionCandidates'],
     }[type] || []);
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
     if (type === 'menuoption' && form.mode === 'diagnose' && !form.currentOptions && images.length === 0) {
@@ -484,7 +484,7 @@ export default function AiForm({ type, tool, bare }) {
               textarea
               flash={flashStyle}
             />
-            <Field label="옵션에만 넣을 것 — 단품으로 안 파는 것만" placeholder="토핑·사리·인분·맵기 등. 위 메뉴판에 적은 건 여기 또 적지 않아도 됩니다.&#10;예: 치즈추가 2000, 낙지추가 8000, 라면사리 2000, 곱빼기 3000, 맵기 0" value={form.optionCandidates} onChange={v=>set('optionCandidates',v)} textarea flash={flashStyle} />
+            <Field label="옵션 * — 단품으로 안 파는 것만" placeholder="토핑·사리·인분·맵기 등. 위 메뉴판에 적은 건 여기 또 적지 않아도 됩니다.&#10;예: 치즈추가 2000, 낙지추가 8000, 라면사리 2000, 곱빼기 3000, 맵기 0" value={form.optionCandidates} onChange={v=>set('optionCandidates',v)} textarea flash={flashStyle} />
             <ChipField label="매장 분위기·주 고객층 — 해당되는 것 모두" value={form.atmosphere} onChange={v=>set('atmosphere',v)} options={AUDIENCE} />
           </>}
 
